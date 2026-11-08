@@ -265,7 +265,7 @@ spec:
           image: grafana/grafana:11.2.0
           env:
             - name: GF_SERVER_ROOT_URL
-              value: "http://40.76.156.41:8080/grafana/"
+              value: "http://astronamy-shop-sudha-demo.eastus.cloudapp.azure.com:8080/grafana/"
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ENABLED
@@ -280,6 +280,8 @@ spec:
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards
+              mountPath: /etc/grafana/provisioning/dashboards
           resources:
             requests:
               cpu: 100m
@@ -290,6 +292,9 @@ spec:
         - name: datasources
           configMap:
             name: opentelemetry-demo-grafana-datasources
+        - name: dashboards
+          configMap:
+            name: opentelemetry-demo-grafana-dashboards
 ---
 apiVersion: v1
 kind: Service
