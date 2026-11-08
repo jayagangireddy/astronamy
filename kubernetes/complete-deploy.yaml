@@ -1129,69 +1129,30 @@ spec:
       serviceAccountName: opentelemetry-demo
       containers:
         - name: frontendproxy
-          image: 'ghcr.io/open-telemetry/demo:1.12.0-frontendproxy'
+          image: envoyproxy/envoy:v1.32-latest
           imagePullPolicy: IfNotPresent
+          args: ["-c", "/etc/envoy/envoy.yaml"]
           ports:
-            
             - containerPort: 8080
               name: service
-          env:
-            - name: OTEL_SERVICE_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.labels['app.kubernetes.io/component']
-            - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
-            - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
-              value: cumulative
-            - name: ENVOY_PORT
-              value: "8080"
-            - name: FLAGD_HOST
-              value: 'opentelemetry-demo-flagd'
-            - name: FLAGD_PORT
-              value: "8013"
-            - name: FLAGD_UI_HOST
-              value: 'opentelemetry-demo-flagd'
-            - name: FLAGD_UI_PORT
-              value: "4000"
-            - name: FRONTEND_HOST
-              value: 'opentelemetry-demo-frontend'
-            - name: FRONTEND_PORT
-              value: "8080"
-            - name: GRAFANA_SERVICE_HOST
-              value: 'opentelemetry-demo-grafana'
-            - name: GRAFANA_SERVICE_PORT
-              value: "80"
-            - name: IMAGE_PROVIDER_HOST
-              value: 'opentelemetry-demo-imageprovider'
-            - name: IMAGE_PROVIDER_PORT
-              value: "8081"
-            - name: JAEGER_SERVICE_HOST
-              value: 'opentelemetry-demo-jaeger-query'
-            - name: JAEGER_SERVICE_PORT
-              value: "16686"
-            - name: LOCUST_WEB_HOST
-              value: 'opentelemetry-demo-loadgenerator'
-            - name: LOCUST_WEB_PORT
-              value: "8089"
-            - name: OTEL_COLLECTOR_HOST
-              value: $(OTEL_COLLECTOR_NAME)
-            - name: OTEL_COLLECTOR_PORT_GRPC
-              value: "4317"
-            - name: OTEL_COLLECTOR_PORT_HTTP
-              value: "4318"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.12.0
           resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
             limits:
-              memory: 50Mi
+              memory: 128Mi
           securityContext:
-            runAsGroup: 101
             runAsNonRoot: true
             runAsUser: 101
+            runAsGroup: 101
           volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+              readOnly: true
       volumes:
+        - name: envoy-config
+          configMap:
+            name: opentelemetry-demo-frontendproxy-config
 ---
 # Source: opentelemetry-demo/templates/component.yaml
 apiVersion: apps/v1
@@ -1907,3 +1868,607 @@ data:
         }
       }
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-investigator-ui
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator
+    app.kubernetes.io/name: opentelemetry-demo-investigator
+    app.kubernetes.io/part-of: opentelemetry-demo
+binaryData:
+  index.html: PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9InV0Zi04IiAvPgogICAgPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xIiAvPgogICAgPG1ldGEgbmFtZT0idGhlbWUtY29sb3IiIGNvbnRlbnQ9IiMxMDE1MWQiIC8+CiAgICA8dGl0bGU+QXN0cm9ub215IFNob3AgSW52ZXN0aWdhdG9yPC90aXRsZT4KICAgIDxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0ic3R5bGVzLmNzcyIgLz4KICAgIDxzY3JpcHQgdHlwZT0ibW9kdWxlIiBzcmM9ImFwcC5qcyI+PC9zY3JpcHQ+CiAgPC9oZWFkPgogIDxib2R5PgogICAgPGRpdiBjbGFzcz0ic2hlbGwiPgogICAgICA8aGVhZGVyIGNsYXNzPSJ0b3BiYXIiPgogICAgICAgIDxhIGNsYXNzPSJicmFuZCIgaHJlZj0iLi8iIGFyaWEtbGFiZWw9IkFzdHJvbm9teSBTaG9wIEludmVzdGlnYXRvciBob21lIj4KICAgICAgICAgIDxzcGFuIGNsYXNzPSJicmFuZC1tYXJrIiBhcmlhLWhpZGRlbj0idHJ1ZSI+4pyzPC9zcGFuPgogICAgICAgICAgPHNwYW4+QXN0cm9ub215IFNob3AgPGI+SW52ZXN0aWdhdG9yPC9iPjwvc3Bhbj4KICAgICAgICA8L2E+CiAgICAgICAgPHNwYW4gY2xhc3M9ImRlbW8tcGlsbCI+PHNwYW4gY2xhc3M9InB1bHNlIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PC9zcGFuPiBBUEkgSU5URUdSQVRJT048L3NwYW4+CiAgICAgIDwvaGVhZGVyPgoKICAgICAgPG1haW4gY2xhc3M9IndvcmtzcGFjZSI+CiAgICAgICAgPGFzaWRlIGNsYXNzPSJpbnZlc3RpZ2F0b3ItcGFuZWwiIGFyaWEtbGFiZWxsZWRieT0iaW52ZXN0aWdhdG9yLXRpdGxlIj4KICAgICAgICAgIDxkaXYgY2xhc3M9InBhbmVsLWhlYWRpbmciPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJleWVicm93Ij5PUEVSQVRJT05TIENPUElMT1Q8L2Rpdj4KICAgICAgICAgICAgPGgxIGlkPSJpbnZlc3RpZ2F0b3ItdGl0bGUiPkludmVzdGlnYXRvcjwvaDE+CiAgICAgICAgICA8cD5Bc2sgYWJvdXQgbGl2ZSB3b3JrbG9hZCBoZWFsdGggYW5kIGluY2lkZW50cy48L3A+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3M9InNlbGVjdGVkLXdvcmtsb2FkIiBpZD0ic2VsZWN0ZWQtd29ya2xvYWQiIGFyaWEtbGl2ZT0icG9saXRlIj4KICAgICAgICAgICAgPHNwYW4gY2xhc3M9InNlbGVjdGVkLWljb24iIGFyaWEtaGlkZGVuPSJ0cnVlIj7ijJU8L3NwYW4+CiAgICAgICAgICAgIDxzcGFuPjxzbWFsbD5TRUxFQ1RFRCBXT1JLTE9BRDwvc21hbGw+PHN0cm9uZyBpZD0ic2VsZWN0ZWQtbmFtZSI+Tm9uZSBzZWxlY3RlZDwvc3Ryb25nPjwvc3Bhbj4KICAgICAgICAgIDwvZGl2PgogICAgICAgICAgPGRpdiBjbGFzcz0iY2hhdC1tZXNzYWdlcyIgaWQ9ImNoYXQtbWVzc2FnZXMiIHJvbGU9ImxvZyIgYXJpYS1saXZlPSJwb2xpdGUiIGFyaWEtcmVsZXZhbnQ9ImFkZGl0aW9ucyB0ZXh0Ij48L2Rpdj4KICAgICAgICAgIDxmb3JtIGNsYXNzPSJjaGF0LWZvcm0iIGlkPSJjaGF0LWZvcm0iPgogICAgICAgICAgICA8bGFiZWwgY2xhc3M9InNyLW9ubHkiIGZvcj0iY2hhdC1pbnB1dCI+TWVzc2FnZSB0aGUgSW52ZXN0aWdhdG9yPC9sYWJlbD4KICAgICAgICAgICAgPHRleHRhcmVhIGlkPSJjaGF0LWlucHV0IiByb3dzPSIyIiBwbGFjZWhvbGRlcj0iQXNrIGFib3V0IGEgd29ya2xvYWTigKYiIHJlcXVpcmVkPjwvdGV4dGFyZWE+CiAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InNlbmQtYnV0dG9uIiB0eXBlPSJzdWJtaXQiIGFyaWEtbGFiZWw9IlNlbmQgbWVzc2FnZSI+CiAgICAgICAgICAgICAgPHNwYW4gYXJpYS1oaWRkZW49InRydWUiPuKGkTwvc3Bhbj4KICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICA8L2Zvcm0+CiAgICAgICAgICA8cCBjbGFzcz0iY2hhdC1mb290bm90ZSI+UmVzcG9uc2VzIGNvbWUgZnJvbSB0aGUgSW52ZXN0aWdhdG9yIGJhY2tlbmQgQVBJLjwvcD4KICAgICAgICA8L2FzaWRlPgoKICAgICAgICA8c2VjdGlvbiBjbGFzcz0ib3ZlcnZpZXciIGFyaWEtbGFiZWxsZWRieT0ib3ZlcnZpZXctdGl0bGUiPgogICAgICAgICAgPGRpdiBjbGFzcz0ib3ZlcnZpZXctaGVhZGluZyI+CiAgICAgICAgICAgIDxkaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iZXllYnJvdyI+Q0xVU1RFUiBPVkVSVklFVzwvZGl2PgogICAgICAgICAgICAgIDxoMiBpZD0ib3ZlcnZpZXctdGl0bGUiPldvcmtsb2FkczwvaDI+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ1cGRhdGVkIj48c3BhbiBjbGFzcz0ibGl2ZS1kb3QiIGFyaWEtaGlkZGVuPSJ0cnVlIj48L3NwYW4+IDxzcGFuIGlkPSJkYXRhLXN0YXR1cyI+Q29ubmVjdGluZyB0byBBUEk8L3NwYW4+PC9kaXY+CiAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICA8ZGl2IGNsYXNzPSJzdW1tYXJ5LWdyaWQiIGFyaWEtbGFiZWw9Ildvcmtsb2FkIHN1bW1hcnkiPgogICAgICAgICAgICA8YXJ0aWNsZSBjbGFzcz0ic3VtbWFyeS1jYXJkIHRvdGFsLWNhcmQiPjxzcGFuPlRvdGFsIHdvcmtsb2Fkczwvc3Bhbj48c3Ryb25nIGlkPSJ0b3RhbC1jb3VudCI+4oCUPC9zdHJvbmc+PHNtYWxsPkxpdmUgS3ViZXJuZXRlcyBEZXBsb3ltZW50czwvc21hbGw+PC9hcnRpY2xlPgogICAgICAgICAgICA8YXJ0aWNsZSBjbGFzcz0ic3VtbWFyeS1jYXJkIGhlYWx0aHktY2FyZCI+PHNwYW4+SGVhbHRoeTwvc3Bhbj48c3Ryb25nIGlkPSJoZWFsdGh5LWNvdW50Ij7igJQ8L3N0cm9uZz48c21hbGw+QWxsIGRlc2lyZWQgcmVwbGljYXMgcmVhZHk8L3NtYWxsPjwvYXJ0aWNsZT4KICAgICAgICAgICAgPGFydGljbGUgY2xhc3M9InN1bW1hcnktY2FyZCBmYWlsaW5nLWNhcmQiPjxzcGFuPkZhaWxpbmc8L3NwYW4+PHN0cm9uZyBpZD0iZmFpbGluZy1jb3VudCI+4oCUPC9zdHJvbmc+PHNtYWxsPk5lZWRzIGludmVzdGlnYXRpb248L3NtYWxsPjwvYXJ0aWNsZT4KICAgICAgICAgIDwvZGl2PgoKICAgICAgICAgIDxkaXYgY2xhc3M9InRhYmxlLWNhcmQiPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0YWJsZS10b29sYmFyIj4KICAgICAgICAgICAgICA8ZGl2PjxoMz5TZXJ2aWNlIGhlYWx0aDwvaDM+PHA+Q2hvb3NlIGEgbGl2ZSB3b3JrbG9hZCB0byBzdGFydCBhbiBpbnZlc3RpZ2F0aW9uLjwvcD48L2Rpdj4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmaWx0ZXJzIiByb2xlPSJncm91cCIgYXJpYS1sYWJlbD0iRmlsdGVyIHdvcmtsb2FkcyI+CiAgICAgICAgICAgICAgICA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgY2xhc3M9ImZpbHRlci1idXR0b24gYWN0aXZlIiBkYXRhLWZpbHRlcj0iYWxsIiBhcmlhLXByZXNzZWQ9InRydWUiPkFsbCA8c3BhbiBpZD0iYWxsLWZpbHRlci1jb3VudCI+PC9zcGFuPjwvYnV0dG9uPgogICAgICAgICAgICAgICAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGNsYXNzPSJmaWx0ZXItYnV0dG9uIiBkYXRhLWZpbHRlcj0iaGVhbHRoeSIgYXJpYS1wcmVzc2VkPSJmYWxzZSI+SGVhbHRoeTwvYnV0dG9uPgogICAgICAgICAgICAgICAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGNsYXNzPSJmaWx0ZXItYnV0dG9uIiBkYXRhLWZpbHRlcj0iZmFpbGluZyIgYXJpYS1wcmVzc2VkPSJmYWxzZSI+RmFpbGluZzwvYnV0dG9uPgogICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0idGFibGUtc2Nyb2xsIj4KICAgICAgICAgICAgICA8dGFibGU+CiAgICAgICAgICAgICAgICA8Y2FwdGlvbiBjbGFzcz0ic3Itb25seSI+TGl2ZSBLdWJlcm5ldGVzIHdvcmtsb2FkIGhlYWx0aCBhbmQgcmVwbGljYSByZWFkaW5lc3M8L2NhcHRpb24+CiAgICAgICAgICAgICAgICA8dGhlYWQ+PHRyPjx0aCBzY29wZT0iY29sIj5TZXJ2aWNlIG5hbWU8L3RoPjx0aCBzY29wZT0iY29sIj5IZWFsdGggc3RhdHVzPC90aD48dGggc2NvcGU9ImNvbCI+UmVhZHkgLyBkZXNpcmVkPC90aD48dGggc2NvcGU9ImNvbCI+PHNwYW4gY2xhc3M9InNyLW9ubHkiPkFjdGlvbnM8L3NwYW4+PC90aD48L3RyPjwvdGhlYWQ+CiAgICAgICAgICAgICAgICA8dGJvZHkgaWQ9Indvcmtsb2FkLXJvd3MiPjwvdGJvZHk+CiAgICAgICAgICAgICAgPC90YWJsZT4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9InRhYmxlLW5vdGUiPjxzcGFuIGNsYXNzPSJhcGktZG90IiBhcmlhLWhpZGRlbj0idHJ1ZSI+PC9zcGFuPiBIZWFsdGggYW5kIHJlcGxpY2EgY291bnRzIGNvbWUgZnJvbSBHRVQgL2FwaS9zZXJ2aWNlcy48L2Rpdj4KICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvc2VjdGlvbj4KICAgICAgPC9tYWluPgogICAgICA8Zm9vdGVyPkFTVFJPTk9NWSBTSE9QIDxzcGFuPsK3PC9zcGFuPiBJTlZFU1RJR0FUT1IgPHNwYW4+wrc8L3NwYW4+IEJBQ0tFTkQgSU5URUdSQVRJT048L2Zvb3Rlcj4KICAgIDwvZGl2PgogIDwvYm9keT4KPC9odG1sPgo=
+  styles.css: OnJvb3R7Y29sb3Itc2NoZW1lOmRhcms7LS1iZzojMGMxMTE4Oy0tcGFuZWw6IzEzMWIyNTstLXBhbmVsLTI6IzE4MjMzMDstLWxpbmU6IzI2MzQ0MjstLW11dGVkOiM4Nzk3YTg7LS10ZXh0OiNlZGY0Zjg7LS1jeWFuOiM2N2Q4ZDA7LS1ncmVlbjojNjlkN2EwOy0tcmVkOiNmZjgyN2Q7LS1hbWJlcjojZmZjNzc4O2ZvbnQtZmFtaWx5OkludGVyLHN5c3RlbS11aSwtYXBwbGUtc3lzdGVtLCdTZWdvZSBVSScsc2Fucy1zZXJpZjtmb250LXN5bnRoZXNpczpub25lO3RleHQtcmVuZGVyaW5nOm9wdGltaXplTGVnaWJpbGl0eX0KKntib3gtc2l6aW5nOmJvcmRlci1ib3h9Ym9keXttYXJnaW46MDtiYWNrZ3JvdW5kOnJhZGlhbC1ncmFkaWVudChlbGxpcHNlIGF0IDc4JSAtMTUlLCMxOTM5NDMgMCx0cmFuc3BhcmVudCAzNyUpLHZhcigtLWJnKTtjb2xvcjp2YXIoLS10ZXh0KTttaW4taGVpZ2h0OjEwMHZofS5zaGVsbHttYXgtd2lkdGg6MTYwMHB4O21hcmdpbjphdXRvO3BhZGRpbmc6MCAzNnB4fS50b3BiYXJ7aGVpZ2h0Ojc2cHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgIzI0MzEzZDtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVufS5icmFuZHtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDoxMXB4O2NvbG9yOnZhcigtLXRleHQpO3RleHQtZGVjb3JhdGlvbjpub25lO2ZvbnQtc2l6ZToxNXB4O2xldHRlci1zcGFjaW5nOi4wMWVtfS5icmFuZCBie2ZvbnQtd2VpZ2h0OjYwMDtjb2xvcjojYTliYWM3fS5icmFuZC1tYXJre3dpZHRoOjMwcHg7aGVpZ2h0OjMwcHg7Ym9yZGVyOjFweCBzb2xpZCAjNGE3NzdiO2JvcmRlci1yYWRpdXM6OXB4O2Rpc3BsYXk6Z3JpZDtwbGFjZS1pdGVtczpjZW50ZXI7Y29sb3I6dmFyKC0tY3lhbik7Zm9udC1zaXplOjIycHh9LmRlbW8tcGlsbCwuZXllYnJvdywudXBkYXRlZCwuc2VsZWN0ZWQtd29ya2xvYWQgc21hbGwsLm1lc3NhZ2UtbWV0YSxmb290ZXIsLnRhYmxlLW5vdGV7Zm9udC1mYW1pbHk6J0RNIE1vbm8nLG1vbm9zcGFjZTtsZXR0ZXItc3BhY2luZzouMDhlbX0uZGVtby1waWxse2JvcmRlcjoxcHggc29saWQgIzYzNTMzMztiYWNrZ3JvdW5kOiMzMDI4MTc7Y29sb3I6I2YzY2Q4Mztib3JkZXItcmFkaXVzOjVweDtwYWRkaW5nOjdweCAxMHB4O2ZvbnQtc2l6ZToxMHB4O2Rpc3BsYXk6ZmxleDtnYXA6OHB4O2FsaWduLWl0ZW1zOmNlbnRlcn0ucHVsc2UsLmxpdmUtZG90e3dpZHRoOjdweDtoZWlnaHQ6N3B4O2JvcmRlci1yYWRpdXM6NTAlO2JhY2tncm91bmQ6dmFyKC0tZ3JlZW4pO2Rpc3BsYXk6aW5saW5lLWJsb2NrO2JveC1zaGFkb3c6MCAwIDEwcHggIzY5ZDdhMDc3fS53b3Jrc3BhY2V7ZGlzcGxheTpncmlkO2dyaWQtdGVtcGxhdGUtY29sdW1uczptaW5tYXgoMzAwcHgsMzcwcHgpIG1pbm1heCgwLDFmcik7Z2FwOjI4cHg7cGFkZGluZzoyOHB4IDAgMjRweDttaW4taGVpZ2h0OmNhbGMoMTAwdmggLSAxMjRweCl9LmludmVzdGlnYXRvci1wYW5lbCwudGFibGUtY2FyZHtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCgxNTVkZWcsIzE1MWYyYSwjMTExOTIyKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWxpbmUpO2JvcmRlci1yYWRpdXM6MTJweH0uaW52ZXN0aWdhdG9yLXBhbmVse3BhZGRpbmc6MjNweDtkaXNwbGF5OmZsZXg7ZmxleC1kaXJlY3Rpb246Y29sdW1uO21pbi1oZWlnaHQ6NjIwcHg7bWF4LWhlaWdodDpjYWxjKDEwMHZoIC0gMTMycHgpfS5leWVicm93e2ZvbnQtc2l6ZToxMHB4O2NvbG9yOiM3Zjk4YWF9LnBhbmVsLWhlYWRpbmcgaDEsLm92ZXJ2aWV3LWhlYWRpbmcgaDJ7Zm9udC1zaXplOjI0cHg7bWFyZ2luOjdweCAwIDVweDtsZXR0ZXItc3BhY2luZzotLjAzNWVtfS5wYW5lbC1oZWFkaW5nIHAsLnRhYmxlLXRvb2xiYXIgcHttYXJnaW46MDtjb2xvcjp2YXIoLS1tdXRlZCk7Zm9udC1zaXplOjEycHg7bGluZS1oZWlnaHQ6MS42fS5zZWxlY3RlZC13b3JrbG9hZHtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDoxMnB4O2JhY2tncm91bmQ6IzFiMjkzNDtib3JkZXI6MXB4IHNvbGlkICMyZTQ1NGY7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxMXB4IDEycHg7bWFyZ2luOjIzcHggMCAxOHB4fS5zZWxlY3RlZC1pY29ue2ZvbnQtc2l6ZToyM3B4O2NvbG9yOnZhcigtLWN5YW4pfS5zZWxlY3RlZC13b3JrbG9hZCBzbWFsbHtkaXNwbGF5OmJsb2NrO2ZvbnQtc2l6ZTo5cHg7Y29sb3I6IzdkOTdhNTttYXJnaW4tYm90dG9tOjNweH0uc2VsZWN0ZWQtd29ya2xvYWQgc3Ryb25ne2ZvbnQtc2l6ZToxMnB4O2ZvbnQtd2VpZ2h0OjYwMH0uY2hhdC1tZXNzYWdlc3tvdmVyZmxvdy15OmF1dG87ZmxleDoxO2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47Z2FwOjEzcHg7cGFkZGluZzowIDNweCAxMnB4IDB9Lm1lc3NhZ2V7bWF4LXdpZHRoOjk1JTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWxpbmUpO2JvcmRlci1yYWRpdXM6OXB4O3BhZGRpbmc6MTFweCAxMnB4fS5tZXNzYWdlLW1ldGF7Zm9udC1zaXplOjlweDtjb2xvcjojOGRhMWFkO21hcmdpbi1ib3R0b206N3B4fS5tZXNzYWdlIHB7Zm9udC1zaXplOjEycHg7Y29sb3I6I2QwZGNlMjtsaW5lLWhlaWdodDoxLjY1O21hcmdpbjowfS5hc3Npc3RhbnQtbWVzc2FnZXtiYWNrZ3JvdW5kOiMxNzIzMmQ7YWxpZ24tc2VsZjpmbGV4LXN0YXJ0fS5hc3Npc3RhbnQtbWVzc2FnZSAubWVzc2FnZS1tZXRhe2NvbG9yOnZhcigtLWN5YW4pfS51c2VyLW1lc3NhZ2V7YmFja2dyb3VuZDojMTYzNDNhO2JvcmRlci1jb2xvcjojMmU1YjVjO2FsaWduLXNlbGY6ZmxleC1lbmR9LnVzZXItbWVzc2FnZSAubWVzc2FnZS1tZXRhe3RleHQtYWxpZ246cmlnaHQ7Y29sb3I6IzliZThkYn0uY2hhdC1mb3Jte3Bvc2l0aW9uOnJlbGF0aXZlO21hcmdpbi10b3A6MTFweH0uY2hhdC1mb3JtIHRleHRhcmVhe3dpZHRoOjEwMCU7cmVzaXplOnZlcnRpY2FsO21pbi1oZWlnaHQ6NTJweDttYXgtaGVpZ2h0OjEyMHB4O2JhY2tncm91bmQ6IzBlMTUxZDtjb2xvcjp2YXIoLS10ZXh0KTtib3JkZXI6MXB4IHNvbGlkICMzNDQ1NTI7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxMnB4IDQ5cHggMTJweCAxMnB4O2ZvbnQ6aW5oZXJpdDtmb250LXNpemU6MTJweDtvdXRsaW5lOm5vbmV9LmNoYXQtZm9ybSB0ZXh0YXJlYTpmb2N1c3tib3JkZXItY29sb3I6dmFyKC0tY3lhbik7Ym94LXNoYWRvdzowIDAgMCAzcHggIzY3ZDhkMDIyfS5jaGF0LWZvcm0gdGV4dGFyZWE6OnBsYWNlaG9sZGVye2NvbG9yOiM3NzhhOTh9LnNlbmQtYnV0dG9ue3Bvc2l0aW9uOmFic29sdXRlO3JpZ2h0OjhweDtib3R0b206OHB4O3dpZHRoOjMycHg7aGVpZ2h0OjMycHg7Ym9yZGVyOjA7Ym9yZGVyLXJhZGl1czo3cHg7YmFja2dyb3VuZDp2YXIoLS1jeWFuKTtjb2xvcjojMGQyMDIzO2ZvbnQtc2l6ZToyMXB4O2N1cnNvcjpwb2ludGVyfS5zZW5kLWJ1dHRvbjpob3ZlcntiYWNrZ3JvdW5kOiM5MWVjZTV9LmNoYXQtZm9vdG5vdGV7Zm9udC1zaXplOjEwcHg7Y29sb3I6Izc0ODg5NzttYXJnaW46OXB4IDAgMH0ub3ZlcnZpZXd7bWluLXdpZHRoOjA7cGFkZGluZy10b3A6M3B4fS5vdmVydmlldy1oZWFkaW5ne2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczplbmQ7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47bWFyZ2luLWJvdHRvbToyMHB4fS5vdmVydmlldy1oZWFkaW5nIGgye2ZvbnQtc2l6ZToyNnB4O21hcmdpbi1ib3R0b206MH0udXBkYXRlZHtmb250LXNpemU6MTBweDtjb2xvcjojOTNhNWIyO2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjhweDtwYWRkaW5nLWJvdHRvbTo0cHh9LnN1bW1hcnktZ3JpZHtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdCgzLG1pbm1heCgwLDFmcikpO2dhcDoxM3B4O21hcmdpbi1ib3R0b206MjBweH0uc3VtbWFyeS1jYXJke2JvcmRlcjoxcHggc29saWQgdmFyKC0tbGluZSk7Ym9yZGVyLXJhZGl1czoxMHB4O3BhZGRpbmc6MTdweCAxOHB4O2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDE0MGRlZywjMTgyMzJlLCMxMzFhMjMpO21pbi1oZWlnaHQ6MTE4cHg7ZGlzcGxheTpmbGV4O2ZsZXgtZGlyZWN0aW9uOmNvbHVtbn0uc3VtbWFyeS1jYXJkPnNwYW57Zm9udC1zaXplOjExcHg7Y29sb3I6I2E5YjdjMn0uc3VtbWFyeS1jYXJkIHN0cm9uZ3tmb250LXNpemU6MjlweDtsaW5lLWhlaWdodDoxLjI7bWFyZ2luOjhweCAwIDRweDtsZXR0ZXItc3BhY2luZzotLjA0ZW19LnN1bW1hcnktY2FyZCBzbWFsbHtmb250LXNpemU6MTBweDtjb2xvcjojNzc4Yjk5fS5oZWFsdGh5LWNhcmQgc3Ryb25ne2NvbG9yOnZhcigtLWdyZWVuKX0uZmFpbGluZy1jYXJkIHN0cm9uZ3tjb2xvcjp2YXIoLS1yZWQpfS50YWJsZS1jYXJke292ZXJmbG93OmhpZGRlbn0udGFibGUtdG9vbGJhcntwYWRkaW5nOjE4cHggMjBweDtkaXNwbGF5OmZsZXg7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47Z2FwOjE1cHg7YWxpZ24taXRlbXM6Y2VudGVyO2JvcmRlci1ib3R0b206MXB4IHNvbGlkIHZhcigtLWxpbmUpfS50YWJsZS10b29sYmFyIGgze2ZvbnQtc2l6ZToxNHB4O21hcmdpbjowIDAgNHB4fS5maWx0ZXJze2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjVweDtiYWNrZ3JvdW5kOiMwZTE1MWM7Ym9yZGVyOjFweCBzb2xpZCAjMmEzODQ0O2JvcmRlci1yYWRpdXM6OHB4O3BhZGRpbmc6NHB4fS5maWx0ZXItYnV0dG9ue2JvcmRlcjowO2NvbG9yOiM5YWFiYjY7YmFja2dyb3VuZDp0cmFuc3BhcmVudDtmb250OmluaGVyaXQ7Zm9udC1zaXplOjExcHg7cGFkZGluZzo3cHggMTBweDtib3JkZXItcmFkaXVzOjVweDtjdXJzb3I6cG9pbnRlcn0uZmlsdGVyLWJ1dHRvbjpob3Zlcntjb2xvcjp2YXIoLS10ZXh0KTtiYWNrZ3JvdW5kOiMyMDJlMzl9LmZpbHRlci1idXR0b24uYWN0aXZle2JhY2tncm91bmQ6IzI5NDU0YTtjb2xvcjojYTBlZWU0fS5maWx0ZXItYnV0dG9uOmZvY3VzLXZpc2libGUsLmludmVzdGlnYXRlLWJ1dHRvbjpmb2N1cy12aXNpYmxlLC5zZW5kLWJ1dHRvbjpmb2N1cy12aXNpYmxle291dGxpbmU6MnB4IHNvbGlkICNhMWZmZjQ7b3V0bGluZS1vZmZzZXQ6MnB4fS50YWJsZS1zY3JvbGx7b3ZlcmZsb3cteDphdXRvfXRhYmxle2JvcmRlci1jb2xsYXBzZTpjb2xsYXBzZTt3aWR0aDoxMDAlO3RleHQtYWxpZ246bGVmdDttaW4td2lkdGg6NTkwcHh9dGhlYWR7YmFja2dyb3VuZDojMTExOTIyfXRoLHRke3BhZGRpbmc6MTNweCAyMHB4O2JvcmRlci1ib3R0b206MXB4IHNvbGlkICMyMDJkMzg7Zm9udC1zaXplOjExcHh9dGhlYWQgdGh7Zm9udC1mYW1pbHk6J0RNIE1vbm8nLG1vbm9zcGFjZTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7bGV0dGVyLXNwYWNpbmc6LjA3ZW07Y29sb3I6IzdlOTE5Zjtmb250LXdlaWdodDo0MDA7Zm9udC1zaXplOjlweH10Ym9keSB0cjpob3ZlcntiYWNrZ3JvdW5kOiMxNzIzMmR9LnNlcnZpY2UtbmFtZXtmb250LXNpemU6MTJweDtmb250LXdlaWdodDo1MDA7Y29sb3I6I2RjZTdlYn0uc3RhdHVzLWJhZGdle2Rpc3BsYXk6aW5saW5lLWZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo3cHg7cGFkZGluZzo1cHggOHB4O2JvcmRlcjoxcHggc29saWQ7Ym9yZGVyLXJhZGl1czoyMHB4O2ZvbnQtc2l6ZToxMHB4fS5zdGF0dXMtYmFkZ2U+c3Bhbnt3aWR0aDo2cHg7aGVpZ2h0OjZweDtib3JkZXItcmFkaXVzOjUwJTtiYWNrZ3JvdW5kOmN1cnJlbnRDb2xvcn0uc3RhdHVzLWJhZGdlLmhlYWx0aHl7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlci1jb2xvcjojMzU2NzRmO2JhY2tncm91bmQ6IzE3MzAyNX0uc3RhdHVzLWJhZGdlLmZhaWxpbmd7Y29sb3I6dmFyKC0tcmVkKTtib3JkZXItY29sb3I6IzcwNDU0MTtiYWNrZ3JvdW5kOiMzMjFmMjB9LnJlcGxpY2Fze2ZvbnQtZmFtaWx5OidETSBNb25vJyxtb25vc3BhY2U7Y29sb3I6I2M1ZDJkOX0ucmVwbGljYXMtZmFpbGluZ3tjb2xvcjp2YXIoLS1yZWQpO2ZvbnQtd2VpZ2h0OjUwMH0uYWN0aW9uLWNlbGx7dGV4dC1hbGlnbjpyaWdodH0uaW52ZXN0aWdhdGUtYnV0dG9ue2JhY2tncm91bmQ6dHJhbnNwYXJlbnQ7Ym9yZGVyOjFweCBzb2xpZCAjMzg1MjViO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6N3B4IDEwcHg7Y29sb3I6IzljZWJlMTtmb250OmluaGVyaXQ7Zm9udC1zaXplOjEwcHg7Y3Vyc29yOnBvaW50ZXJ9LmludmVzdGlnYXRlLWJ1dHRvbjpob3ZlcntiYWNrZ3JvdW5kOiMxZDNhNDA7Ym9yZGVyLWNvbG9yOiM1YjllOWJ9LnRhYmxlLW5vdGV7Ym9yZGVyLXRvcDoxcHggc29saWQgdmFyKC0tbGluZSk7cGFkZGluZzoxMnB4IDIwcHg7Y29sb3I6Izg3OThhMztmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4wMzVlbTtkaXNwbGF5OmZsZXg7Z2FwOjhweDthbGlnbi1pdGVtczpjZW50ZXJ9LmRlbW8tZG90e3dpZHRoOjZweDtoZWlnaHQ6NnB4O2JvcmRlci1yYWRpdXM6NTAlO2JhY2tncm91bmQ6dmFyKC0tYW1iZXIpfWZvb3Rlcntib3JkZXItdG9wOjFweCBzb2xpZCAjMjAyZDM4O2NvbG9yOiM2NTc3ODQ7Zm9udC1zaXplOjlweDtwYWRkaW5nOjE3cHggMCAyMXB4fWZvb3RlciBzcGFue2NvbG9yOiM0MDU0NWY7cGFkZGluZzowIDVweH0uc3Itb25seXtwb3NpdGlvbjphYnNvbHV0ZTt3aWR0aDoxcHg7aGVpZ2h0OjFweDtwYWRkaW5nOjA7bWFyZ2luOi0xcHg7b3ZlcmZsb3c6aGlkZGVuO2NsaXA6cmVjdCgwLDAsMCwwKTt3aGl0ZS1zcGFjZTpub3dyYXA7Ym9yZGVyOjB9CkBtZWRpYShtYXgtd2lkdGg6OTgwcHgpey5zaGVsbHtwYWRkaW5nOjAgMjJweH0ud29ya3NwYWNle2dyaWQtdGVtcGxhdGUtY29sdW1uczptaW5tYXgoMjcwcHgsMzIwcHgpIG1pbm1heCgwLDFmcik7Z2FwOjE4cHh9LmludmVzdGlnYXRvci1wYW5lbHtwYWRkaW5nOjE4cHh9LnN1bW1hcnktZ3JpZHtnYXA6OHB4fS5zdW1tYXJ5LWNhcmR7cGFkZGluZzoxNHB4O21pbi1oZWlnaHQ6MTEwcHh9LnRhYmxlLXRvb2xiYXJ7YWxpZ24taXRlbXM6ZmxleC1zdGFydDtmbGV4LWRpcmVjdGlvbjpjb2x1bW59LmZpbHRlcnN7YWxpZ24tc2VsZjpmbGV4LXN0YXJ0fX0KQG1lZGlhKG1heC13aWR0aDo3MjBweCl7LnNoZWxse3BhZGRpbmc6MCAxNHB4fS50b3BiYXJ7aGVpZ2h0OjY0cHh9LmJyYW5ke2ZvbnQtc2l6ZToxM3B4fS53b3Jrc3BhY2V7ZGlzcGxheTpmbGV4O2ZsZXgtZGlyZWN0aW9uOmNvbHVtbjtwYWRkaW5nLXRvcDoxOHB4fS5vdmVydmlld3tvcmRlcjoxfS5pbnZlc3RpZ2F0b3ItcGFuZWx7b3JkZXI6MjttaW4taGVpZ2h0OjQ4MHB4O21heC1oZWlnaHQ6NzB2aH0uc3VtbWFyeS1ncmlke2dyaWQtdGVtcGxhdGUtY29sdW1uczpyZXBlYXQoMyxtaW5tYXgoMCwxZnIpKTtnYXA6N3B4fS5zdW1tYXJ5LWNhcmR7cGFkZGluZzoxMnB4IDEwcHg7bWluLWhlaWdodDoxMDVweH0uc3VtbWFyeS1jYXJkPnNwYW57Zm9udC1zaXplOjEwcHh9LnN1bW1hcnktY2FyZCBzdHJvbmd7Zm9udC1zaXplOjI0cHh9LnN1bW1hcnktY2FyZCBzbWFsbHtmb250LXNpemU6OXB4fS5vdmVydmlldy1oZWFkaW5ne2FsaWduLWl0ZW1zOmZsZXgtc3RhcnR9LnVwZGF0ZWR7Zm9udC1zaXplOjlweH0udGFibGUtdG9vbGJhcntwYWRkaW5nOjE1cHh9LmZpbHRlcnN7bWF4LXdpZHRoOjEwMCU7b3ZlcmZsb3cteDphdXRvfS5maWx0ZXItYnV0dG9ue3BhZGRpbmc6N3B4IDhweDt3aGl0ZS1zcGFjZTpub3dyYXB9dGgsdGR7cGFkZGluZzoxMnB4fS50YWJsZS1ub3Rle3BhZGRpbmc6MTFweCAxNHB4O2xpbmUtaGVpZ2h0OjEuNX1mb290ZXJ7Zm9udC1zaXplOjhweH19CkBtZWRpYShwcmVmZXJzLXJlZHVjZWQtbW90aW9uOnJlZHVjZSl7KiwqOjpiZWZvcmUsKjo6YWZ0ZXJ7c2Nyb2xsLWJlaGF2aW9yOmF1dG8haW1wb3J0YW50O3RyYW5zaXRpb246bm9uZSFpbXBvcnRhbnQ7YW5pbWF0aW9uOm5vbmUhaW1wb3J0YW50fX0KLnVwZGF0ZWQudW5hdmFpbGFibGUgLmxpdmUtZG90e2JhY2tncm91bmQ6dmFyKC0tcmVkKTtib3gtc2hhZG93OjAgMCAxMHB4ICNmZjgyN2Q3N30udXBkYXRlZC5jb25uZWN0ZWQgLmxpdmUtZG90e2JhY2tncm91bmQ6dmFyKC0tZ3JlZW4pfS5zeXN0ZW0tbWVzc2FnZXtiYWNrZ3JvdW5kOiMyYTIwMjA7Ym9yZGVyLWNvbG9yOiM2OTQxM2Q7YWxpZ24tc2VsZjpmbGV4LXN0YXJ0fS5zeXN0ZW0tbWVzc2FnZSAubWVzc2FnZS1tZXRhe2NvbG9yOnZhcigtLWFtYmVyKX0uZW1wdHktc3RhdGV7dGV4dC1hbGlnbjpjZW50ZXI7cGFkZGluZzozOHB4IDIycHg7Y29sb3I6I2E5YjdjMjtsaW5lLWhlaWdodDoxLjd9LmFwaS1kb3R7d2lkdGg6NnB4O2hlaWdodDo2cHg7Ym9yZGVyLXJhZGl1czo1MCU7YmFja2dyb3VuZDp2YXIoLS1jeWFuKX0K
+  app.js: aW1wb3J0IHsgZ2V0V29ya2xvYWRzIH0gZnJvbSAnLi9kYXRhLmpzJzsKaW1wb3J0IHsgc2VuZENoYXRNZXNzYWdlIH0gZnJvbSAnLi9jaGF0LmpzJzsKCmNvbnN0IHN0YXRlID0geyB3b3JrbG9hZHM6IFtdLCBmaWx0ZXI6ICdhbGwnLCBzZWxlY3RlZDogbnVsbCwgbG9hZEVycm9yOiBudWxsIH07CmNvbnN0IHJvd3MgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcjd29ya2xvYWQtcm93cycpOwpjb25zdCBtZXNzYWdlcyA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNjaGF0LW1lc3NhZ2VzJyk7CmNvbnN0IHNlbGVjdGVkTmFtZSA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNzZWxlY3RlZC1uYW1lJyk7CmNvbnN0IGRhdGFTdGF0dXMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcjZGF0YS1zdGF0dXMnKTsKCmZ1bmN0aW9uIGFkZE1lc3NhZ2UodGV4dCwga2luZCwgbGFiZWwpIHsKICBjb25zdCBhcnRpY2xlID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnYXJ0aWNsZScpOwogIGFydGljbGUuY2xhc3NOYW1lID0gYG1lc3NhZ2UgJHtraW5kfWA7CiAgY29uc3QgbWV0YSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2RpdicpOwogIG1ldGEuY2xhc3NOYW1lID0gJ21lc3NhZ2UtbWV0YSc7CiAgbWV0YS50ZXh0Q29udGVudCA9IGxhYmVsOwogIGNvbnN0IGNvbnRlbnQgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdwJyk7CiAgY29udGVudC50ZXh0Q29udGVudCA9IHRleHQ7CiAgYXJ0aWNsZS5hcHBlbmQobWV0YSwgY29udGVudCk7CiAgbWVzc2FnZXMuYXBwZW5kKGFydGljbGUpOwogIG1lc3NhZ2VzLnNjcm9sbFRvcCA9IG1lc3NhZ2VzLnNjcm9sbEhlaWdodDsKfQoKZnVuY3Rpb24gcmVuZGVyU3VtbWFyeSgpIHsKICBjb25zdCBoZWFsdGh5ID0gc3RhdGUud29ya2xvYWRzLmZpbHRlcigoaXRlbSkgPT4gaXRlbS5zdGF0dXMgPT09ICdoZWFsdGh5JykubGVuZ3RoOwogIGNvbnN0IGNvdW50ID0gc3RhdGUubG9hZEVycm9yID8gJ+KAlCcgOiBzdGF0ZS53b3JrbG9hZHMubGVuZ3RoOwogIGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyN0b3RhbC1jb3VudCcpLnRleHRDb250ZW50ID0gY291bnQ7CiAgZG9jdW1lbnQucXVlcnlTZWxlY3RvcignI2hlYWx0aHktY291bnQnKS50ZXh0Q29udGVudCA9IHN0YXRlLmxvYWRFcnJvciA/ICfigJQnIDogaGVhbHRoeTsKICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcjZmFpbGluZy1jb3VudCcpLnRleHRDb250ZW50ID0gc3RhdGUubG9hZEVycm9yID8gJ+KAlCcgOiBzdGF0ZS53b3JrbG9hZHMubGVuZ3RoIC0gaGVhbHRoeTsKICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcjYWxsLWZpbHRlci1jb3VudCcpLnRleHRDb250ZW50ID0gc3RhdGUud29ya2xvYWRzLmxlbmd0aDsKfQoKZnVuY3Rpb24gcmVuZGVyUm93cygpIHsKICBpZiAoc3RhdGUubG9hZEVycm9yKSB7CiAgICByb3dzLnJlcGxhY2VDaGlsZHJlbigpOwogICAgY29uc3Qgcm93ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndHInKTsKICAgIGNvbnN0IGNlbGwgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCd0ZCcpOwogICAgY2VsbC5jb2xTcGFuID0gNDsKICAgIGNlbGwuY2xhc3NOYW1lID0gJ2VtcHR5LXN0YXRlJzsKICAgIGNlbGwudGV4dENvbnRlbnQgPSAnTGl2ZSB3b3JrbG9hZCBkYXRhIGlzIHVuYXZhaWxhYmxlLiBUaGUgYmFja2VuZCBtdXN0IHByb3ZpZGUgR0VUIC9hcGkvc2VydmljZXM7IG5vIHNhbXBsZSBkYXRhIGlzIHNob3duLic7CiAgICByb3cuYXBwZW5kKGNlbGwpOwogICAgcm93cy5hcHBlbmQocm93KTsKICAgIHJldHVybjsKICB9CiAgY29uc3QgdmlzaWJsZSA9IHN0YXRlLndvcmtsb2Fkcy5maWx0ZXIoKGl0ZW0pID0+IHN0YXRlLmZpbHRlciA9PT0gJ2FsbCcgfHwgaXRlbS5zdGF0dXMgPT09IHN0YXRlLmZpbHRlcik7CiAgcm93cy5yZXBsYWNlQ2hpbGRyZW4oKTsKICBpZiAodmlzaWJsZS5sZW5ndGggPT09IDApIHsKICAgIGNvbnN0IHJvdyA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3RyJyk7CiAgICBjb25zdCBjZWxsID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGQnKTsKICAgIGNlbGwuY29sU3BhbiA9IDQ7CiAgICBjZWxsLmNsYXNzTmFtZSA9ICdlbXB0eS1zdGF0ZSc7CiAgICBjZWxsLnRleHRDb250ZW50ID0gJ05vIHdvcmtsb2FkcyBtYXRjaCB0aGlzIGZpbHRlci4nOwogICAgcm93LmFwcGVuZChjZWxsKTsKICAgIHJvd3MuYXBwZW5kKHJvdyk7CiAgICByZXR1cm47CiAgfQoKICBmb3IgKGNvbnN0IHdvcmtsb2FkIG9mIHZpc2libGUpIHsKICAgIGNvbnN0IHJvdyA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3RyJyk7CiAgICBjb25zdCBzZXJ2aWNlID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGgnKTsKICAgIHNlcnZpY2Uuc2NvcGUgPSAncm93JzsKICAgIHNlcnZpY2UuY2xhc3NOYW1lID0gJ3NlcnZpY2UtbmFtZSc7CiAgICBzZXJ2aWNlLnRleHRDb250ZW50ID0gd29ya2xvYWQubmFtZTsKCiAgICBjb25zdCBoZWFsdGhDZWxsID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGQnKTsKICAgIGNvbnN0IGJhZGdlID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc3BhbicpOwogICAgYmFkZ2UuY2xhc3NOYW1lID0gYHN0YXR1cy1iYWRnZSAke3dvcmtsb2FkLnN0YXR1c31gOwogICAgYmFkZ2UuaW5uZXJIVE1MID0gYDxzcGFuIGFyaWEtaGlkZGVuPSJ0cnVlIj48L3NwYW4+JHt3b3JrbG9hZC5zdGF0dXMgPT09ICdoZWFsdGh5JyA/ICdIZWFsdGh5JyA6ICdGYWlsaW5nJ31gOwogICAgaGVhbHRoQ2VsbC5hcHBlbmQoYmFkZ2UpOwoKICAgIGNvbnN0IHJlcGxpY2FzID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgndGQnKTsKICAgIHJlcGxpY2FzLmNsYXNzTmFtZSA9IGByZXBsaWNhcyAke3dvcmtsb2FkLnN0YXR1cyA9PT0gJ2ZhaWxpbmcnID8gJ3JlcGxpY2FzLWZhaWxpbmcnIDogJyd9YDsKICAgIHJlcGxpY2FzLnRleHRDb250ZW50ID0gYCR7d29ya2xvYWQucmVhZHl9LyR7d29ya2xvYWQuZGVzaXJlZH1gOwoKICAgIGNvbnN0IGFjdGlvbiA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3RkJyk7CiAgICBhY3Rpb24uY2xhc3NOYW1lID0gJ2FjdGlvbi1jZWxsJzsKICAgIGNvbnN0IGJ1dHRvbiA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2J1dHRvbicpOwogICAgYnV0dG9uLnR5cGUgPSAnYnV0dG9uJzsKICAgIGJ1dHRvbi5jbGFzc05hbWUgPSAnaW52ZXN0aWdhdGUtYnV0dG9uJzsKICAgIGJ1dHRvbi50ZXh0Q29udGVudCA9ICdJbnZlc3RpZ2F0ZSc7CiAgICBidXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWxhYmVsJywgYEludmVzdGlnYXRlICR7d29ya2xvYWQubmFtZX1gKTsKICAgIGJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNlbGVjdFdvcmtsb2FkKHdvcmtsb2FkKSk7CiAgICBhY3Rpb24uYXBwZW5kKGJ1dHRvbik7CgogICAgcm93LmFwcGVuZChzZXJ2aWNlLCBoZWFsdGhDZWxsLCByZXBsaWNhcywgYWN0aW9uKTsKICAgIHJvd3MuYXBwZW5kKHJvdyk7CiAgfQp9Cgphc3luYyBmdW5jdGlvbiBzZWxlY3RXb3JrbG9hZCh3b3JrbG9hZCkgewogIHN0YXRlLnNlbGVjdGVkID0gd29ya2xvYWQ7CiAgc2VsZWN0ZWROYW1lLnRleHRDb250ZW50ID0gd29ya2xvYWQubmFtZTsKICBhZGRNZXNzYWdlKGBJbnZlc3RpZ2F0ZSAke3dvcmtsb2FkLm5hbWV9YCwgJ3VzZXItbWVzc2FnZScsICdZT1UnKTsKICB0cnkgewogICAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCBzZW5kQ2hhdE1lc3NhZ2UoJ0ludmVzdGlnYXRlIHRoaXMgd29ya2xvYWQnLCB3b3JrbG9hZCk7CiAgICBhZGRNZXNzYWdlKHJlc3BvbnNlLnRleHQsICdhc3Npc3RhbnQtbWVzc2FnZScsIHJlc3BvbnNlLnNvdXJjZSk7CiAgfSBjYXRjaCAoZXJyb3IpIHsKICAgIGFkZE1lc3NhZ2UoYExpdmUgY2hhdCBpcyB1bmF2YWlsYWJsZTogJHtlcnJvci5tZXNzYWdlfS4gTm8gZGVtbyByZXNwb25zZSB3YXMgZ2VuZXJhdGVkLmAsICdzeXN0ZW0tbWVzc2FnZScsICdBUEkgVU5BVkFJTEFCTEUnKTsKICB9CiAgZG9jdW1lbnQucXVlcnlTZWxlY3RvcignI2NoYXQtaW5wdXQnKS5mb2N1cygpOwp9Cgphc3luYyBmdW5jdGlvbiByZWZyZXNoV29ya2xvYWRzKCkgewogIHRyeSB7CiAgICBzdGF0ZS53b3JrbG9hZHMgPSBhd2FpdCBnZXRXb3JrbG9hZHMoKTsKICAgIHN0YXRlLmxvYWRFcnJvciA9IG51bGw7CiAgICBkYXRhU3RhdHVzLnRleHRDb250ZW50ID0gJ0xpdmUgS3ViZXJuZXRlcyBkYXRhIMK3IHJlZnJlc2hlZCBqdXN0IG5vdyc7CiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcudXBkYXRlZCcpLmNsYXNzTGlzdC5yZW1vdmUoJ3VuYXZhaWxhYmxlJyk7CiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcudXBkYXRlZCcpLmNsYXNzTGlzdC5hZGQoJ2Nvbm5lY3RlZCcpOwogIH0gY2F0Y2ggKGVycm9yKSB7CiAgICBzdGF0ZS53b3JrbG9hZHMgPSBbXTsKICAgIHN0YXRlLmxvYWRFcnJvciA9IGVycm9yOwogICAgZGF0YVN0YXR1cy50ZXh0Q29udGVudCA9ICdMaXZlIEt1YmVybmV0ZXMgZGF0YSB1bmF2YWlsYWJsZSc7CiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcudXBkYXRlZCcpLmNsYXNzTGlzdC5yZW1vdmUoJ2Nvbm5lY3RlZCcpOwogICAgZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLnVwZGF0ZWQnKS5jbGFzc0xpc3QuYWRkKCd1bmF2YWlsYWJsZScpOwogIH0KICByZW5kZXJTdW1tYXJ5KCk7CiAgcmVuZGVyUm93cygpOwp9Cgpkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCdbZGF0YS1maWx0ZXJdJykuZm9yRWFjaCgoYnV0dG9uKSA9PiB7CiAgYnV0dG9uLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgKCkgPT4gewogICAgc3RhdGUuZmlsdGVyID0gYnV0dG9uLmRhdGFzZXQuZmlsdGVyOwogICAgZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnW2RhdGEtZmlsdGVyXScpLmZvckVhY2goKGZpbHRlckJ1dHRvbikgPT4gewogICAgICBjb25zdCBhY3RpdmUgPSBmaWx0ZXJCdXR0b24gPT09IGJ1dHRvbjsKICAgICAgZmlsdGVyQnV0dG9uLmNsYXNzTGlzdC50b2dnbGUoJ2FjdGl2ZScsIGFjdGl2ZSk7CiAgICAgIGZpbHRlckJ1dHRvbi5zZXRBdHRyaWJ1dGUoJ2FyaWEtcHJlc3NlZCcsIFN0cmluZyhhY3RpdmUpKTsKICAgIH0pOwogICAgcmVuZGVyUm93cygpOwogIH0pOwp9KTsKCmRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNjaGF0LWZvcm0nKS5hZGRFdmVudExpc3RlbmVyKCdzdWJtaXQnLCBhc3luYyAoZXZlbnQpID0+IHsKICBldmVudC5wcmV2ZW50RGVmYXVsdCgpOwogIGNvbnN0IGlucHV0ID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignI2NoYXQtaW5wdXQnKTsKICBjb25zdCBxdWVzdGlvbiA9IGlucHV0LnZhbHVlLnRyaW0oKTsKICBpZiAoIXF1ZXN0aW9uKSByZXR1cm47CiAgaW5wdXQudmFsdWUgPSAnJzsKICBhZGRNZXNzYWdlKHF1ZXN0aW9uLCAndXNlci1tZXNzYWdlJywgJ1lPVScpOwogIHRyeSB7CiAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IHNlbmRDaGF0TWVzc2FnZShxdWVzdGlvbiwgc3RhdGUuc2VsZWN0ZWQpOwogICAgYWRkTWVzc2FnZShyZXNwb25zZS50ZXh0LCAnYXNzaXN0YW50LW1lc3NhZ2UnLCByZXNwb25zZS5zb3VyY2UpOwogIH0gY2F0Y2ggKGVycm9yKSB7CiAgICBhZGRNZXNzYWdlKGBMaXZlIGNoYXQgaXMgdW5hdmFpbGFibGU6ICR7ZXJyb3IubWVzc2FnZX0uIE5vIGRlbW8gcmVzcG9uc2Ugd2FzIGdlbmVyYXRlZC5gLCAnc3lzdGVtLW1lc3NhZ2UnLCAnQVBJIFVOQVZBSUxBQkxFJyk7CiAgfQp9KTsKCmF3YWl0IHJlZnJlc2hXb3JrbG9hZHMoKTsKaWYgKHN0YXRlLmxvYWRFcnJvcikgewogIGFkZE1lc3NhZ2UoYENvdWxkIG5vdCBsb2FkIGxpdmUgd29ya2xvYWRzOiAke3N0YXRlLmxvYWRFcnJvci5tZXNzYWdlfS4gTm8gc2FtcGxlIGRhdGEgaXMgc2hvd24uYCwgJ3N5c3RlbS1tZXNzYWdlJywgJ0FQSSBVTkFWQUlMQUJMRScpOwp9IGVsc2UgewogIGFkZE1lc3NhZ2UoJ0xpdmUgS3ViZXJuZXRlcyB3b3JrbG9hZCBkYXRhIGlzIGNvbm5lY3RlZC4gVGhpcyBkYXNoYm9hcmQgcmVmcmVzaGVzIGV2ZXJ5IDE1IHNlY29uZHMuJywgJ2Fzc2lzdGFudC1tZXNzYWdlJywgJ0xJVkUgREFUQScpOwp9CndpbmRvdy5zZXRJbnRlcnZhbChyZWZyZXNoV29ya2xvYWRzLCAxNTAwMCk7Cg==
+  data.js: ZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIGdldFdvcmtsb2FkcygpIHsKICBjb25zdCByZXNwb25zZSA9IGF3YWl0IGZldGNoKCcvYXBpL3NlcnZpY2VzJywgeyBoZWFkZXJzOiB7IEFjY2VwdDogJ2FwcGxpY2F0aW9uL2pzb24nIH0sIGNhY2hlOiAnbm8tc3RvcmUnIH0pOwogIGlmICghcmVzcG9uc2Uub2spIHRocm93IG5ldyBFcnJvcihgR0VUIC9hcGkvc2VydmljZXMgcmV0dXJuZWQgSFRUUCAke3Jlc3BvbnNlLnN0YXR1c31gKTsKCiAgbGV0IHBheWxvYWQ7CiAgdHJ5IHsKICAgIHBheWxvYWQgPSBhd2FpdCByZXNwb25zZS5qc29uKCk7CiAgfSBjYXRjaCB7CiAgICB0aHJvdyBuZXcgRXJyb3IoJ0dFVCAvYXBpL3NlcnZpY2VzIGRpZCBub3QgcmV0dXJuIEpTT04nKTsKICB9CgogIGlmICghQXJyYXkuaXNBcnJheShwYXlsb2FkLnNlcnZpY2VzKSkgewogICAgdGhyb3cgbmV3IEVycm9yKCdHRVQgL2FwaS9zZXJ2aWNlcyBtdXN0IHJldHVybiB7ICJzZXJ2aWNlcyI6IFsuLi5dIH0nKTsKICB9CgogIHJldHVybiBwYXlsb2FkLnNlcnZpY2VzLm1hcCgoc2VydmljZSkgPT4gewogICAgY29uc3QgeyBuYW1lLCByZWFkeVJlcGxpY2FzLCBkZXNpcmVkUmVwbGljYXMgfSA9IHNlcnZpY2U7CiAgICBpZiAodHlwZW9mIG5hbWUgIT09ICdzdHJpbmcnIHx8ICFuYW1lIHx8ICFOdW1iZXIuaXNJbnRlZ2VyKHJlYWR5UmVwbGljYXMpIHx8ICFOdW1iZXIuaXNJbnRlZ2VyKGRlc2lyZWRSZXBsaWNhcykpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKCdFYWNoIHNlcnZpY2UgbmVlZHMgbmFtZSwgcmVhZHlSZXBsaWNhcywgYW5kIGRlc2lyZWRSZXBsaWNhcyBmaWVsZHMnKTsKICAgIH0KICAgIHJldHVybiB7CiAgICAgIG5hbWUsCiAgICAgIHJlYWR5OiByZWFkeVJlcGxpY2FzLAogICAgICBkZXNpcmVkOiBkZXNpcmVkUmVwbGljYXMsCiAgICAgIHN0YXR1czogcmVhZHlSZXBsaWNhcyA+PSBkZXNpcmVkUmVwbGljYXMgPyAnaGVhbHRoeScgOiAnZmFpbGluZycsCiAgICB9OwogIH0pOwp9Cg==
+  chat.js: ZXhwb3J0IGFzeW5jIGZ1bmN0aW9uIHNlbmRDaGF0TWVzc2FnZShtZXNzYWdlLCB3b3JrbG9hZCkgewogIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2goJy9hcGkvY2hhdCcsIHsKICAgIG1ldGhvZDogJ1BPU1QnLAogICAgaGVhZGVyczogeyBBY2NlcHQ6ICdhcHBsaWNhdGlvbi9qc29uJywgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJyB9LAogICAgYm9keTogSlNPTi5zdHJpbmdpZnkoeyBtZXNzYWdlLCBzZXJ2aWNlTmFtZTogd29ya2xvYWQ/Lm5hbWUgPz8gbnVsbCB9KSwKICB9KTsKICBpZiAoIXJlc3BvbnNlLm9rKSB0aHJvdyBuZXcgRXJyb3IoYFBPU1QgL2FwaS9jaGF0IHJldHVybmVkIEhUVFAgJHtyZXNwb25zZS5zdGF0dXN9YCk7CgogIGNvbnN0IHBheWxvYWQgPSBhd2FpdCByZXNwb25zZS5qc29uKCk7CiAgaWYgKHR5cGVvZiBwYXlsb2FkLnJlcGx5ICE9PSAnc3RyaW5nJykgdGhyb3cgbmV3IEVycm9yKCdQT1NUIC9hcGkvY2hhdCBtdXN0IHJldHVybiBhIHJlcGx5IHN0cmluZycpOwogIHJldHVybiB7IHRleHQ6IHBheWxvYWQucmVwbHksIHNvdXJjZTogJ0xJVkUgQkFDS0VORCcgfTsKfQo=
+  nginx.conf: c2VydmVyIHsKICBsaXN0ZW4gODA4MDsKICBzZXJ2ZXJfbmFtZSBfOwogIHJvb3QgL3Vzci9zaGFyZS9uZ2lueC9odG1sOwogIGluZGV4IGluZGV4Lmh0bWw7CgogIGxvY2F0aW9uID0gL2hlYWx0aHogewogICAgYWNjZXNzX2xvZyBvZmY7CiAgICBkZWZhdWx0X3R5cGUgdGV4dC9wbGFpbjsKICAgIHJldHVybiAyMDAgIm9rXG4iOwogIH0KCiAgbG9jYXRpb24gLyB7CiAgICB0cnlfZmlsZXMgJHVyaSAkdXJpLyAvaW5kZXguaHRtbDsKICB9Cn0K
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-frontendproxy-config
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: frontendproxy
+    app.kubernetes.io/part-of: opentelemetry-demo
+data:
+  envoy.yaml: |
+    static_resources:
+      listeners:
+        - name: ingress
+          address:
+            socket_address: { address: 0.0.0.0, port_value: 8080 }
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: ingress_http
+                    codec_type: AUTO
+                    tracing:
+                      spawn_upstream_span: true
+                      provider:
+                        name: envoy.tracers.opentelemetry
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+                          grpc_service:
+                            envoy_grpc: { cluster_name: opentelemetry_collector_grpc }
+                            timeout: 0.250s
+                          service_name: frontendproxy
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                        - name: frontend
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/api/" }
+                              route: { cluster: investigator_api }
+                            - match: { prefix: "/investigator/" }
+                              route: { cluster: investigator, prefix_rewrite: "/" }
+                            - match: { path: "/investigator" }
+                              redirect: { path_redirect: "/investigator/" }
+                            - match: { prefix: "/loadgen" }
+                              route: { cluster: loadgen, prefix_rewrite: "/" }
+                            - match: { prefix: "/otlp-http/" }
+                              route: { cluster: opentelemetry_collector_http, prefix_rewrite: "/" }
+                            - match: { prefix: "/jaeger" }
+                              route: { cluster: jaeger }
+                            - match: { prefix: "/grafana" }
+                              route: { cluster: grafana }
+                            - match: { prefix: "/images/" }
+                              route: { cluster: image-provider, prefix_rewrite: "/" }
+                            - match: { prefix: "/flagservice/" }
+                              route: { cluster: flagservice, prefix_rewrite: "/", timeout: 0s }
+                            - match: { prefix: "/feature" }
+                              route: { cluster: flagd-ui }
+                            - match: { prefix: "/" }
+                              route: { cluster: frontend }
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      clusters:
+        - name: opentelemetry_collector_grpc
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config:
+                http2_protocol_options: {}
+          load_assignment:
+            cluster_name: opentelemetry_collector_grpc
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-otelcol, port_value: 4317 }
+        - name: opentelemetry_collector_http
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: opentelemetry_collector_http
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-otelcol, port_value: 4318 }
+        - name: investigator
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: investigator
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-investigator, port_value: 8080 }
+        - name: investigator_api
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: investigator_api
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-investigator-api, port_value: 8080 }
+        - name: frontend
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: frontend
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-frontend, port_value: 8080 }
+        - name: image-provider
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: image-provider
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-imageprovider, port_value: 8081 }
+        - name: flagservice
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: flagservice
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-flagd, port_value: 8013 }
+        - name: flagd-ui
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: flagd-ui
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-flagd, port_value: 4000 }
+        - name: loadgen
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: loadgen
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-loadgenerator, port_value: 8089 }
+        - name: grafana
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: grafana
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-grafana, port_value: 80 }
+        - name: jaeger
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: jaeger
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: opentelemetry-demo-jaeger-query, port_value: 16686 }
+    admin:
+      address:
+        socket_address: { address: 127.0.0.1, port_value: 10000 }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-investigator
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator
+    app.kubernetes.io/name: opentelemetry-demo-investigator
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-demo-investigator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: opentelemetry-demo
+        app.kubernetes.io/component: investigator
+        app.kubernetes.io/name: opentelemetry-demo-investigator
+        app.kubernetes.io/part-of: opentelemetry-demo
+    spec:
+      containers:
+        - name: investigator
+          image: nginxinc/nginx-unprivileged:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: ui
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: nginx.conf
+              readOnly: true
+      volumes:
+        - name: ui
+          configMap:
+            name: opentelemetry-demo-investigator-ui
+        - name: nginx-config
+          configMap:
+            name: opentelemetry-demo-investigator-ui
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-investigator
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator
+    app.kubernetes.io/name: opentelemetry-demo-investigator
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: opentelemetry-demo-investigator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: opentelemetry-demo-investigator-api
+  namespace: default
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: opentelemetry-demo-investigator-api
+  namespace: default
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+subjects:
+  - kind: ServiceAccount
+    name: opentelemetry-demo-investigator-api
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: opentelemetry-demo-investigator-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-demo-investigator-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: opentelemetry-demo
+        app.kubernetes.io/component: investigator-api
+        app.kubernetes.io/name: opentelemetry-demo-investigator-api
+        app.kubernetes.io/part-of: opentelemetry-demo
+    spec:
+      serviceAccountName: opentelemetry-demo-investigator-api
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-u", "/app/server.py"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: api-code
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: api-code
+          configMap:
+            name: opentelemetry-demo-investigator-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: opentelemetry-demo-investigator-api
+  namespace: default
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: opentelemetry-demo-investigator-api
+  namespace: default
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+subjects:
+  - kind: ServiceAccount
+    name: opentelemetry-demo-investigator-api
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: opentelemetry-demo-investigator-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-demo-investigator-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: opentelemetry-demo
+        app.kubernetes.io/component: investigator-api
+        app.kubernetes.io/name: opentelemetry-demo-investigator-api
+        app.kubernetes.io/part-of: opentelemetry-demo
+    spec:
+      serviceAccountName: opentelemetry-demo-investigator-api
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-u", "/app/server.py"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: api-code
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: api-code
+          configMap:
+            name: opentelemetry-demo-investigator-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-investigator-api
+  labels:
+    app.kubernetes.io/instance: opentelemetry-demo
+    app.kubernetes.io/component: investigator-api
+    app.kubernetes.io/name: opentelemetry-demo-investigator-api
+    app.kubernetes.io/part-of: opentelemetry-demo
+binaryData:
+  server.py: IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJTbWFsbCwgcmVhZC1vbmx5IEt1YmVybmV0ZXMgRGVwbG95bWVudCBzdGF0dXMgQVBJIGZvciB0aGUgSW52ZXN0aWdhdG9yIFVJLiIiIgoKaW1wb3J0IGpzb24KaW1wb3J0IG9zCmltcG9ydCBzc2wKZnJvbSBodHRwLnNlcnZlciBpbXBvcnQgQmFzZUhUVFBSZXF1ZXN0SGFuZGxlciwgVGhyZWFkaW5nSFRUUFNlcnZlcgpmcm9tIHVybGxpYi5lcnJvciBpbXBvcnQgSFRUUEVycm9yLCBVUkxFcnJvcgpmcm9tIHVybGxpYi5yZXF1ZXN0IGltcG9ydCBSZXF1ZXN0LCB1cmxvcGVuCgoKUE9SVCA9IGludChvcy5lbnZpcm9uLmdldCgiUE9SVCIsICI4MDgwIikpCk5BTUVTUEFDRSA9IG9zLmVudmlyb24uZ2V0KCJLVUJFUk5FVEVTX05BTUVTUEFDRSIsICJkZWZhdWx0IikKQVBJX1NFUlZFUiA9IG9zLmVudmlyb24uZ2V0KCJLVUJFUk5FVEVTX1NFUlZJQ0VfSE9TVCIpCkFQSV9QT1JUID0gb3MuZW52aXJvbi5nZXQoIktVQkVSTkVURVNfU0VSVklDRV9QT1JUX0hUVFBTIiwgIjQ0MyIpClRPS0VOX1BBVEggPSAiL3Zhci9ydW4vc2VjcmV0cy9rdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3Rva2VuIgpDQV9QQVRIID0gIi92YXIvcnVuL3NlY3JldHMva3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9jYS5jcnQiCgoKZGVmIGxpc3RfZGVwbG95bWVudHMoKToKICAgIGlmIG5vdCBBUElfU0VSVkVSOgogICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcigiS3ViZXJuZXRlcyBBUEkgc2VydmljZSBlbnZpcm9ubWVudCBpcyB1bmF2YWlsYWJsZSIpCgogICAgd2l0aCBvcGVuKFRPS0VOX1BBVEgsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIHRva2VuX2ZpbGU6CiAgICAgICAgdG9rZW4gPSB0b2tlbl9maWxlLnJlYWQoKS5zdHJpcCgpCgogICAgZW5kcG9pbnQgPSAoCiAgICAgICAgZiJodHRwczovL3tBUElfU0VSVkVSfTp7QVBJX1BPUlR9L2FwaXMvYXBwcy92MS9uYW1lc3BhY2VzLyIKICAgICAgICBmIntOQU1FU1BBQ0V9L2RlcGxveW1lbnRzIgogICAgKQogICAgcmVxdWVzdCA9IFJlcXVlc3QoZW5kcG9pbnQsIGhlYWRlcnM9eyJBdXRob3JpemF0aW9uIjogZiJCZWFyZXIge3Rva2VufSJ9KQogICAgY29udGV4dCA9IHNzbC5jcmVhdGVfZGVmYXVsdF9jb250ZXh0KGNhZmlsZT1DQV9QQVRIKQogICAgd2l0aCB1cmxvcGVuKHJlcXVlc3QsIGNvbnRleHQ9Y29udGV4dCwgdGltZW91dD01KSBhcyByZXNwb25zZToKICAgICAgICBwYXlsb2FkID0ganNvbi5sb2FkKHJlc3BvbnNlKQoKICAgIHNlcnZpY2VzID0gW10KICAgIGZvciBkZXBsb3ltZW50IGluIHBheWxvYWQuZ2V0KCJpdGVtcyIsIFtdKToKICAgICAgICBtZXRhZGF0YSA9IGRlcGxveW1lbnQuZ2V0KCJtZXRhZGF0YSIsIHt9KQogICAgICAgIG5hbWUgPSBtZXRhZGF0YS5nZXQoIm5hbWUiLCAiIikKICAgICAgICBpZiBub3QgbmFtZS5zdGFydHN3aXRoKCJvcGVudGVsZW1ldHJ5LWRlbW8tIikgb3IgbmFtZS5zdGFydHN3aXRoKCJvcGVudGVsZW1ldHJ5LWRlbW8taW52ZXN0aWdhdG9yIik6CiAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgc3BlYyA9IGRlcGxveW1lbnQuZ2V0KCJzcGVjIiwge30pCiAgICAgICAgc3RhdHVzID0gZGVwbG95bWVudC5nZXQoInN0YXR1cyIsIHt9KQogICAgICAgIHNlcnZpY2VzLmFwcGVuZCgKICAgICAgICAgICAgewogICAgICAgICAgICAgICAgIm5hbWUiOiBuYW1lLAogICAgICAgICAgICAgICAgInJlYWR5UmVwbGljYXMiOiBzdGF0dXMuZ2V0KCJyZWFkeVJlcGxpY2FzIiwgMCksCiAgICAgICAgICAgICAgICAiZGVzaXJlZFJlcGxpY2FzIjogc3BlYy5nZXQoInJlcGxpY2FzIiwgMSksCiAgICAgICAgICAgIH0KICAgICAgICApCiAgICByZXR1cm4gc29ydGVkKHNlcnZpY2VzLCBrZXk9bGFtYmRhIGl0ZW06IGl0ZW1bIm5hbWUiXSkKCgpjbGFzcyBIYW5kbGVyKEJhc2VIVFRQUmVxdWVzdEhhbmRsZXIpOgogICAgZGVmIHNlbmRfanNvbihzZWxmLCBzdGF0dXMsIHBheWxvYWQpOgogICAgICAgIGJvZHkgPSBqc29uLmR1bXBzKHBheWxvYWQsIHNlcGFyYXRvcnM9KCIsIiwgIjoiKSkuZW5jb2RlKCJ1dGYtOCIpCiAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNlKHN0YXR1cykKICAgICAgICBzZWxmLnNlbmRfaGVhZGVyKCJDb250ZW50LVR5cGUiLCAiYXBwbGljYXRpb24vanNvbjsgY2hhcnNldD11dGYtOCIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ2FjaGUtQ29udHJvbCIsICJuby1zdG9yZSIpCiAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1MZW5ndGgiLCBzdHIobGVuKGJvZHkpKSkKICAgICAgICBzZWxmLmVuZF9oZWFkZXJzKCkKICAgICAgICBzZWxmLndmaWxlLndyaXRlKGJvZHkpCgogICAgZGVmIGRvX0dFVChzZWxmKToKICAgICAgICBpZiBzZWxmLnBhdGggPT0gIi9oZWFsdGh6IjoKICAgICAgICAgICAgc2VsZi5zZW5kX3Jlc3BvbnNlKDIwMCkKICAgICAgICAgICAgc2VsZi5zZW5kX2hlYWRlcigiQ29udGVudC1MZW5ndGgiLCAiMiIpCiAgICAgICAgICAgIHNlbGYuZW5kX2hlYWRlcnMoKQogICAgICAgICAgICBzZWxmLndmaWxlLndyaXRlKGIib2siKQogICAgICAgICAgICByZXR1cm4KICAgICAgICBpZiBzZWxmLnBhdGggIT0gIi9hcGkvc2VydmljZXMiOgogICAgICAgICAgICBzZWxmLnNlbmRfanNvbig0MDQsIHsiZXJyb3IiOiAibm90IGZvdW5kIn0pCiAgICAgICAgICAgIHJldHVybgogICAgICAgIHRyeToKICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oMjAwLCB7InNlcnZpY2VzIjogbGlzdF9kZXBsb3ltZW50cygpfSkKICAgICAgICBleGNlcHQgKEhUVFBFcnJvciwgVVJMRXJyb3IsIE9TRXJyb3IsIFJ1bnRpbWVFcnJvciwgVmFsdWVFcnJvcikgYXMgZXJyb3I6CiAgICAgICAgICAgIHNlbGYubG9nX2Vycm9yKCJLdWJlcm5ldGVzIEFQSSByZXF1ZXN0IGZhaWxlZDogJXMiLCBlcnJvcikKICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oNTAyLCB7ImVycm9yIjogInVuYWJsZSB0byByZWFkIEt1YmVybmV0ZXMgRGVwbG95bWVudHMifSkKCiAgICBkZWYgZG9fUE9TVChzZWxmKToKICAgICAgICBpZiBzZWxmLnBhdGggPT0gIi9hcGkvY2hhdCI6CiAgICAgICAgICAgIHNlbGYuc2VuZF9qc29uKDUwMSwgeyJlcnJvciI6ICJjaGF0IGlzIG5vdCBjb25maWd1cmVkOyBsaXZlIHdvcmtsb2FkIGRhdGEgaXMgYXZhaWxhYmxlIn0pCiAgICAgICAgZWxzZToKICAgICAgICAgICAgc2VsZi5zZW5kX2pzb24oNDA0LCB7ImVycm9yIjogIm5vdCBmb3VuZCJ9KQoKICAgIGRlZiBsb2dfbWVzc2FnZShzZWxmLCBmb3JtYXRfc3RyaW5nLCAqYXJncyk6CiAgICAgICAgcHJpbnQoZiJ7c2VsZi5hZGRyZXNzX3N0cmluZygpfSAtIHtmb3JtYXRfc3RyaW5nICUgYXJnc30iLCBmbHVzaD1UcnVlKQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBUaHJlYWRpbmdIVFRQU2VydmVyKCgiMC4wLjAuMCIsIFBPUlQpLCBIYW5kbGVyKS5zZXJ2ZV9mb3JldmVyKCkK

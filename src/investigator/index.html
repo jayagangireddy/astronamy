@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10151d" />
+    <title>Astronomy Shop Investigator</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Astronomy Shop Investigator home">
+          <span class="brand-mark" aria-hidden="true">✳</span>
+          <span>Astronomy Shop <b>Investigator</b></span>
+        </a>
+        <span class="demo-pill"><span class="pulse" aria-hidden="true"></span> API INTEGRATION</span>
+      </header>
+
+      <main class="workspace">
+        <aside class="investigator-panel" aria-labelledby="investigator-title">
+          <div class="panel-heading">
+            <div class="eyebrow">OPERATIONS COPILOT</div>
+            <h1 id="investigator-title">Investigator</h1>
+          <p>Ask about live workload health and incidents.</p>
+          </div>
+          <div class="selected-workload" id="selected-workload" aria-live="polite">
+            <span class="selected-icon" aria-hidden="true">⌕</span>
+            <span><small>SELECTED WORKLOAD</small><strong id="selected-name">None selected</strong></span>
+          </div>
+          <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+          <form class="chat-form" id="chat-form">
+            <label class="sr-only" for="chat-input">Message the Investigator</label>
+            <textarea id="chat-input" rows="2" placeholder="Ask about a workload…" required></textarea>
+            <button class="send-button" type="submit" aria-label="Send message">
+              <span aria-hidden="true">↑</span>
+            </button>
+          </form>
+          <p class="chat-footnote">Responses come from the Investigator backend API.</p>
+        </aside>
+
+        <section class="overview" aria-labelledby="overview-title">
+          <div class="overview-heading">
+            <div>
+              <div class="eyebrow">CLUSTER OVERVIEW</div>
+              <h2 id="overview-title">Workloads</h2>
+            </div>
+            <div class="updated"><span class="live-dot" aria-hidden="true"></span> <span id="data-status">Connecting to API</span></div>
+          </div>
+
+          <div class="summary-grid" aria-label="Workload summary">
+            <article class="summary-card total-card"><span>Total workloads</span><strong id="total-count">—</strong><small>Live Kubernetes Deployments</small></article>
+            <article class="summary-card healthy-card"><span>Healthy</span><strong id="healthy-count">—</strong><small>All desired replicas ready</small></article>
+            <article class="summary-card failing-card"><span>Failing</span><strong id="failing-count">—</strong><small>Needs investigation</small></article>
+          </div>
+
+          <div class="table-card">
+            <div class="table-toolbar">
+              <div><h3>Service health</h3><p>Choose a live workload to start an investigation.</p></div>
+              <div class="filters" role="group" aria-label="Filter workloads">
+                <button type="button" class="filter-button active" data-filter="all" aria-pressed="true">All <span id="all-filter-count"></span></button>
+                <button type="button" class="filter-button" data-filter="healthy" aria-pressed="false">Healthy</button>
+                <button type="button" class="filter-button" data-filter="failing" aria-pressed="false">Failing</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">Live Kubernetes workload health and replica readiness</caption>
+                <thead><tr><th scope="col">Service name</th><th scope="col">Health status</th><th scope="col">Ready / desired</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody id="workload-rows"></tbody>
+              </table>
+            </div>
+            <div class="table-note"><span class="api-dot" aria-hidden="true"></span> Health and replica counts come from GET /api/services.</div>
+          </div>
+        </section>
+      </main>
+      <footer>ASTRONOMY SHOP <span>·</span> INVESTIGATOR <span>·</span> BACKEND INTEGRATION</footer>
+    </div>
+  </body>
+</html>

@@ -23,14 +23,19 @@ data:
         endpoint: 0.0.0.0:8889
       debug:
         verbosity: basic
+    connectors:
+      spanmetrics: {}
     service:
+      telemetry:
+        metrics:
+          address: 0.0.0.0:8888
       pipelines:
         traces:
           receivers: [otlp]
           processors: [batch]
-          exporters: [otlp/jaeger]
+          exporters: [otlp/jaeger, spanmetrics]
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, spanmetrics]
           processors: [batch]
           exporters: [prometheus]
         logs:
@@ -56,6 +61,9 @@ spec:
     - name: prometheus-metrics
       port: 8889
       targetPort: 8889
+    - name: otel-metrics
+      port: 8888
+      targetPort: 8888
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -82,15 +90,17 @@ spec:
               containerPort: 4318
             - name: prometheus
               containerPort: 8889
+            - name: otel-metrics
+              containerPort: 8888
           volumeMounts:
             - name: config
               mountPath: /etc/otelcol
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
             limits:
-              memory: 512Mi
+              memory: 1Gi
       volumes:
         - name: config
           configMap:
@@ -173,7 +183,7 @@ data:
     scrape_configs:
       - job_name: otel-collector
         static_configs:
-          - targets: [opentelemetry-demo-otelcol:8889]
+          - targets: [opentelemetry-demo-otelcol:8888, opentelemetry-demo-otelcol:8889]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -205,9 +215,9 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
             limits:
-              memory: 512Mi
+              memory: 1Gi
       volumes:
         - name: config
           configMap:

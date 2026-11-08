@@ -37,6 +37,12 @@ static_resources:
                       domains:
                         - "*"
                       routes:
+                        - match: { prefix: "/api/" }
+                          route: { cluster: investigator_api }
+                        - match: { prefix: "/investigator/" }
+                          route: { cluster: investigator, prefix_rewrite: "/" }
+                        - match: { path: "/investigator" }
+                          redirect: { path_redirect: "/investigator/" }
                         - match: { prefix: "/loadgen" }
                           route: { cluster: loadgen, prefix_rewrite: "/" }
                         - match: { prefix: "/otlp-http/" }
@@ -260,6 +266,30 @@ static_resources:
                     socket_address:
                       address: ${GRAFANA_HOST}
                       port_value: ${GRAFANA_PORT}
+    - name: investigator
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: investigator
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${INVESTIGATOR_HOST}
+                      port_value: ${INVESTIGATOR_PORT}
+    - name: investigator_api
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: investigator_api
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${INVESTIGATOR_API_HOST}
+                      port_value: ${INVESTIGATOR_API_PORT}
     - name: jaeger
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN

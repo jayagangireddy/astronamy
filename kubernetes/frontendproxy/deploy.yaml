@@ -31,66 +31,27 @@ spec:
       serviceAccountName: opentelemetry-demo
       containers:
         - name: frontendproxy
-          image: 'ghcr.io/open-telemetry/demo:1.12.0-frontendproxy'
+          image: envoyproxy/envoy:v1.32-latest
           imagePullPolicy: IfNotPresent
+          args: ["-c", "/etc/envoy/envoy.yaml"]
           ports:
-            
             - containerPort: 8080
               name: service
-          env:
-            - name: OTEL_SERVICE_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.labels['app.kubernetes.io/component']
-            - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
-            - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
-              value: cumulative
-            - name: ENVOY_PORT
-              value: "8080"
-            - name: FLAGD_HOST
-              value: 'opentelemetry-demo-flagd'
-            - name: FLAGD_PORT
-              value: "8013"
-            - name: FLAGD_UI_HOST
-              value: 'opentelemetry-demo-flagd'
-            - name: FLAGD_UI_PORT
-              value: "4000"
-            - name: FRONTEND_HOST
-              value: 'opentelemetry-demo-frontend'
-            - name: FRONTEND_PORT
-              value: "8080"
-            - name: GRAFANA_SERVICE_HOST
-              value: 'opentelemetry-demo-grafana'
-            - name: GRAFANA_SERVICE_PORT
-              value: "80"
-            - name: IMAGE_PROVIDER_HOST
-              value: 'opentelemetry-demo-imageprovider'
-            - name: IMAGE_PROVIDER_PORT
-              value: "8081"
-            - name: JAEGER_SERVICE_HOST
-              value: 'opentelemetry-demo-jaeger-query'
-            - name: JAEGER_SERVICE_PORT
-              value: "16686"
-            - name: LOCUST_WEB_HOST
-              value: 'opentelemetry-demo-loadgenerator'
-            - name: LOCUST_WEB_PORT
-              value: "8089"
-            - name: OTEL_COLLECTOR_HOST
-              value: $(OTEL_COLLECTOR_NAME)
-            - name: OTEL_COLLECTOR_PORT_GRPC
-              value: "4317"
-            - name: OTEL_COLLECTOR_PORT_HTTP
-              value: "4318"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.12.0
           resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
             limits:
-              memory: 50Mi
+              memory: 128Mi
           securityContext:
-            runAsGroup: 101
             runAsNonRoot: true
             runAsUser: 101
+            runAsGroup: 101
           volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+              readOnly: true
       volumes:
+        - name: envoy-config
+          configMap:
+            name: opentelemetry-demo-frontendproxy-config
