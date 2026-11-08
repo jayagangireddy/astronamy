@@ -1,0 +1,305 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-otelcol-config
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch: {}
+    exporters:
+      otlp/jaeger:
+        endpoint: opentelemetry-demo-jaeger-collector:4317
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: 0.0.0.0:8889
+      debug:
+        verbosity: basic
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp/jaeger]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-otelcol
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-demo-otelcol
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: prometheus-metrics
+      port: 8889
+      targetPort: 8889
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-otelcol
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry-demo-otelcol
+  template:
+    metadata:
+      labels:
+        app: opentelemetry-demo-otelcol
+    spec:
+      containers:
+        - name: otelcol
+          image: otel/opentelemetry-collector-contrib:0.111.0
+          args: ["--config=/etc/otelcol/config.yaml"]
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: prometheus
+              containerPort: 8889
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: opentelemetry-demo-otelcol-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry-demo-jaeger
+  template:
+    metadata:
+      labels:
+        app: opentelemetry-demo-jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.62.0
+          args: ["--query.base-path=/jaeger"]
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+            - name: MEMORY_MAX_TRACES
+              value: "25000"
+          ports:
+            - name: query
+              containerPort: 16686
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-jaeger-query
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-demo-jaeger
+  ports:
+    - name: query
+      port: 16686
+      targetPort: 16686
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-jaeger-collector
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-demo-jaeger
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: otel-collector
+        static_configs:
+          - targets: [opentelemetry-demo-otelcol:8889]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry-demo-prometheus
+  template:
+    metadata:
+      labels:
+        app: opentelemetry-demo-prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.55.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=7d
+          ports:
+            - name: http
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: opentelemetry-demo-prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-demo-prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentelemetry-demo-grafana-datasources
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: webstore-metrics
+        type: prometheus
+        url: http://opentelemetry-demo-prometheus:9090
+        access: proxy
+        isDefault: true
+      - name: Jaeger
+        uid: webstore-traces
+        type: jaeger
+        url: http://opentelemetry-demo-jaeger-query:16686/jaeger
+        access: proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opentelemetry-demo-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry-demo-grafana
+  template:
+    metadata:
+      labels:
+        app: opentelemetry-demo-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          env:
+            - name: GF_SERVER_ROOT_URL
+              value: "http://40.76.156.41:8080/grafana/"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Viewer
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: datasources
+          configMap:
+            name: opentelemetry-demo-grafana-datasources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opentelemetry-demo-grafana
+spec:
+  type: ClusterIP
+  selector:
+    app: opentelemetry-demo-grafana
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
