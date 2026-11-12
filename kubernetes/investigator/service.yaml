@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-investigator
+  namespace: investigator
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator

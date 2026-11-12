@@ -1,8 +1,8 @@
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opentelemetry-demo-otelcol-config
+  namespace: otelcol
 data:
   config.yaml: |
     receivers:
@@ -16,7 +16,7 @@ data:
       batch: {}
     exporters:
       otlp/jaeger:
-        endpoint: opentelemetry-demo-jaeger-collector:4317
+        endpoint: opentelemetry-demo-jaeger-collector.jaeger.svc.cluster.local:4317
         tls:
           insecure: true
       prometheus:
@@ -47,6 +47,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-otelcol
+  namespace: otelcol
 spec:
   type: ClusterIP
   selector:
@@ -69,6 +70,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-otelcol
+  namespace: otelcol
 spec:
   replicas: 1
   selector:
@@ -110,6 +112,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-jaeger
+  namespace: jaeger
 spec:
   replicas: 1
   selector:
@@ -147,6 +150,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-jaeger-query
+  namespace: jaeger
 spec:
   type: ClusterIP
   selector:
@@ -160,6 +164,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-jaeger-collector
+  namespace: jaeger
 spec:
   type: ClusterIP
   selector:
@@ -176,6 +181,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opentelemetry-demo-prometheus-config
+  namespace: prometheus
 data:
   prometheus.yml: |
     global:
@@ -183,12 +189,13 @@ data:
     scrape_configs:
       - job_name: otel-collector
         static_configs:
-          - targets: [opentelemetry-demo-otelcol:8888, opentelemetry-demo-otelcol:8889]
+          - targets: [opentelemetry-demo-otelcol.otelcol.svc.cluster.local:8888, opentelemetry-demo-otelcol.otelcol.svc.cluster.local:8889]
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-prometheus
+  namespace: prometheus
 spec:
   replicas: 1
   selector:
@@ -227,6 +234,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-prometheus
+  namespace: prometheus
 spec:
   type: ClusterIP
   selector:
@@ -240,6 +248,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opentelemetry-demo-grafana-datasources
+  namespace: grafana
 data:
   datasources.yaml: |
     apiVersion: 1
@@ -247,19 +256,20 @@ data:
       - name: Prometheus
         uid: webstore-metrics
         type: prometheus
-        url: http://opentelemetry-demo-prometheus:9090
+        url: http://opentelemetry-demo-prometheus.prometheus.svc.cluster.local:9090
         access: proxy
         isDefault: true
       - name: Jaeger
         uid: webstore-traces
         type: jaeger
-        url: http://opentelemetry-demo-jaeger-query:16686/jaeger
+        url: http://opentelemetry-demo-jaeger-query.jaeger.svc.cluster.local:16686/jaeger
         access: proxy
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-grafana
+  namespace: grafana
 spec:
   replicas: 1
   selector:
@@ -310,6 +320,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-grafana
+  namespace: grafana
 spec:
   type: ClusterIP
   selector:

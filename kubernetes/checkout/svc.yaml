@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-checkoutservice
+  namespace: checkoutservice
   labels:
     
     opentelemetry.io/name: opentelemetry-demo-checkoutservice

@@ -10,7 +10,6 @@ from urllib.request import Request, urlopen
 
 
 PORT = int(os.environ.get("PORT", "8080"))
-NAMESPACE = os.environ.get("KUBERNETES_NAMESPACE", "default")
 API_SERVER = os.environ.get("KUBERNETES_SERVICE_HOST")
 API_PORT = os.environ.get("KUBERNETES_SERVICE_PORT_HTTPS", "443")
 TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -24,10 +23,7 @@ def list_deployments():
     with open(TOKEN_PATH, encoding="utf-8") as token_file:
         token = token_file.read().strip()
 
-    endpoint = (
-        f"https://{API_SERVER}:{API_PORT}/apis/apps/v1/namespaces/"
-        f"{NAMESPACE}/deployments"
-    )
+    endpoint = f"https://{API_SERVER}:{API_PORT}/apis/apps/v1/deployments"
     request = Request(endpoint, headers={"Authorization": f"Bearer {token}"})
     context = ssl.create_default_context(cafile=CA_PATH)
     with urlopen(request, context=context, timeout=5) as response:
@@ -43,7 +39,9 @@ def list_deployments():
         status = deployment.get("status", {})
         services.append(
             {
-                "name": name,
+                "name": name.removeprefix("opentelemetry-demo-"),
+                "resourceName": name,
+                "namespace": metadata.get("namespace", "default"),
                 "readyReplicas": status.get("readyReplicas", 0),
                 "desiredReplicas": spec.get("replicas", 1),
             }
@@ -79,7 +77,38 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/api/chat":
-            self.send_json(501, {"error": "chat is not configured; live workload data is available"})
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+                if content_length <= 0 or content_length > 16_384:
+                    self.send_json(400, {"error": "request body must be between 1 and 16384 bytes"})
+                    return
+                request = json.loads(self.rfile.read(content_length))
+                service_name = request.get("serviceName")
+                namespace = request.get("namespace")
+                workloads = list_deployments()
+                selected = next(
+                    (
+                        item
+                        for item in workloads
+                        if item["resourceName"] == service_name and item["namespace"] == namespace
+                    ),
+                    None,
+                )
+                if selected:
+                    reply = (
+                        f"DEMO RESPONSE — {selected['name']} in namespace {selected['namespace']} "
+                        f"has {selected['readyReplicas']}/{selected['desiredReplicas']} replicas ready. "
+                        "This is a sample response based on live Deployment status; no AI agent or incident-log analysis is connected yet."
+                    )
+                else:
+                    reply = (
+                        "DEMO RESPONSE — live workload data is available. Select a workload to see its current "
+                        "ready versus desired replica count. No AI agent or incident-log analysis is connected yet."
+                    )
+                self.send_json(200, {"reply": reply, "source": "DEMO RESPONSE"})
+            except (HTTPError, URLError, OSError, RuntimeError, ValueError, TypeError) as error:
+                self.log_error("Kubernetes API request failed: %s", error)
+                self.send_json(502, {"error": "unable to prepare a demo response from live Kubernetes data"})
         else:
             self.send_json(404, {"error": "not found"})
 

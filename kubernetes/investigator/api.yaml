@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: opentelemetry-demo-investigator-api
+  namespace: investigator-api
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator-api
@@ -9,10 +10,9 @@ metadata:
     app.kubernetes.io/part-of: opentelemetry-demo
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: opentelemetry-demo-investigator-api
-  namespace: default
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator-api
@@ -24,10 +24,9 @@ rules:
     verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: opentelemetry-demo-investigator-api
-  namespace: default
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator-api
@@ -36,16 +35,17 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: opentelemetry-demo-investigator-api
-    namespace: default
+    namespace: investigator-api
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: opentelemetry-demo-investigator-api
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-investigator-api
+  namespace: investigator-api
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator-api
@@ -85,10 +85,6 @@ spec:
               value: "8080"
             - name: PYTHONDONTWRITEBYTECODE
               value: "1"
-            - name: KUBERNETES_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           readinessProbe:
             httpGet:
               path: /healthz
@@ -126,6 +122,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: opentelemetry-demo-investigator-api
+  namespace: investigator-api
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: investigator-api

@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-frontendproxy
+  namespace: frontendproxy
   labels:
     
     opentelemetry.io/name: opentelemetry-demo-frontendproxy

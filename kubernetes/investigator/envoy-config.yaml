@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opentelemetry-demo-frontendproxy-config
+  namespace: frontendproxy
   labels:
     app.kubernetes.io/instance: opentelemetry-demo
     app.kubernetes.io/component: frontendproxy
@@ -36,8 +37,13 @@ data:
                         - name: frontend
                           domains: ["*"]
                           routes:
-                            - match: { prefix: "/api/" }
-                              route: { cluster: investigator_api }
+                            - match: { path: "/mcp" }
+                              route:
+                                cluster: kube_investigator_mcp
+                                timeout: 0s
+                                idle_timeout: 0s
+                            - match: { prefix: "/investigator-api/" }
+                              route: { cluster: investigator_api, prefix_rewrite: "/api/" }
                             - match: { prefix: "/investigator/" }
                               route: { cluster: investigator, prefix_rewrite: "/" }
                             - match: { path: "/investigator" }
@@ -78,7 +84,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-otelcol, port_value: 4317 }
+                        socket_address: { address: opentelemetry-demo-otelcol.otelcol.svc.cluster.local, port_value: 4317 }
         - name: opentelemetry_collector_http
           type: STRICT_DNS
           connect_timeout: 5s
@@ -89,7 +95,18 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-otelcol, port_value: 4318 }
+                        socket_address: { address: opentelemetry-demo-otelcol.otelcol.svc.cluster.local, port_value: 4318 }
+        - name: kube_investigator_mcp
+          type: STRICT_DNS
+          connect_timeout: 5s
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: kube_investigator_mcp
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: kube-investigator-mcp.kube-investigator.svc.cluster.local, port_value: 8000 }
         - name: investigator
           type: STRICT_DNS
           connect_timeout: 5s
@@ -100,7 +117,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-investigator, port_value: 8080 }
+                        socket_address: { address: opentelemetry-demo-investigator.investigator.svc.cluster.local, port_value: 8080 }
         - name: investigator_api
           type: STRICT_DNS
           connect_timeout: 5s
@@ -111,7 +128,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-investigator-api, port_value: 8080 }
+                        socket_address: { address: opentelemetry-demo-investigator-api.investigator-api.svc.cluster.local, port_value: 8080 }
         - name: frontend
           type: STRICT_DNS
           connect_timeout: 5s
@@ -122,7 +139,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-frontend, port_value: 8080 }
+                        socket_address: { address: opentelemetry-demo-frontend.frontend.svc.cluster.local, port_value: 8080 }
         - name: image-provider
           type: STRICT_DNS
           connect_timeout: 5s
@@ -133,7 +150,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-imageprovider, port_value: 8081 }
+                        socket_address: { address: opentelemetry-demo-imageprovider.imageprovider.svc.cluster.local, port_value: 8081 }
         - name: flagservice
           type: STRICT_DNS
           connect_timeout: 5s
@@ -144,7 +161,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-flagd, port_value: 8013 }
+                        socket_address: { address: opentelemetry-demo-flagd.flagd.svc.cluster.local, port_value: 8013 }
         - name: flagd-ui
           type: STRICT_DNS
           connect_timeout: 5s
@@ -155,7 +172,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-flagd, port_value: 4000 }
+                        socket_address: { address: opentelemetry-demo-flagd.flagd.svc.cluster.local, port_value: 4000 }
         - name: loadgen
           type: STRICT_DNS
           connect_timeout: 5s
@@ -166,7 +183,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-loadgenerator, port_value: 8089 }
+                        socket_address: { address: opentelemetry-demo-loadgenerator.loadgenerator.svc.cluster.local, port_value: 8089 }
         - name: grafana
           type: STRICT_DNS
           connect_timeout: 5s
@@ -177,7 +194,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-grafana, port_value: 80 }
+                        socket_address: { address: opentelemetry-demo-grafana.grafana.svc.cluster.local, port_value: 80 }
         - name: jaeger
           type: STRICT_DNS
           connect_timeout: 5s
@@ -188,7 +205,7 @@ data:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: opentelemetry-demo-jaeger-query, port_value: 16686 }
+                        socket_address: { address: opentelemetry-demo-jaeger-query.jaeger.svc.cluster.local, port_value: 16686 }
     admin:
       address:
         socket_address: { address: 127.0.0.1, port_value: 10000 }
