@@ -1,10 +1,9 @@
 import { getWorkloads } from './data.js';
 import { sendChatMessage } from './chat.js';
 
-const state = { workloads: [], filter: 'all', selected: null, loadError: null };
+const state = { workloads: [], filter: 'all', history: [], busy: false, loadError: null };
 const rows = document.querySelector('#workload-rows');
 const messages = document.querySelector('#chat-messages');
-const selectedName = document.querySelector('#selected-name');
 const dataStatus = document.querySelector('#data-status');
 
 function addMessage(text, kind, label) {
@@ -34,7 +33,7 @@ function renderRows() {
     rows.replaceChildren();
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 4;
+    cell.colSpan = 3;
     cell.className = 'empty-state';
     cell.textContent = 'Live workload data is unavailable. The backend must provide GET /api/services; no sample data is shown.';
     row.append(cell);
@@ -46,7 +45,7 @@ function renderRows() {
   if (visible.length === 0) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 4;
+    cell.colSpan = 3;
     cell.className = 'empty-state';
     cell.textContent = 'No workloads match this filter.';
     row.append(cell);
@@ -71,34 +70,24 @@ function renderRows() {
     replicas.className = `replicas ${workload.status === 'failing' ? 'replicas-failing' : ''}`;
     replicas.textContent = `${workload.ready}/${workload.desired}`;
 
-    const action = document.createElement('td');
-    action.className = 'action-cell';
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'investigate-button';
-    button.textContent = 'Investigate';
-    button.setAttribute('aria-label', `Investigate ${workload.name}`);
-    button.addEventListener('click', () => selectWorkload(workload));
-    action.append(button);
-
-    row.append(service, healthCell, replicas, action);
+    row.append(service, healthCell, replicas);
     rows.append(row);
   }
 }
 
-async function selectWorkload(workload) {
-  state.selected = workload;
-  selectedName.textContent = workload.name;
-  addMessage(`Investigate ${workload.name}`, 'user-message', 'YOU');
+async function submitChat(question) {
+  addMessage('Investigating...', 'system-message', 'LOADING');
+  const pending = messages.lastElementChild;
   try {
-    const response = await sendChatMessage('Investigate this workload', workload);
+    const response = await sendChatMessage(question, state.history);
+    state.history.push({ role: 'user', text: question }, { role: 'assistant', text: response.text });
     addMessage(response.text, 'assistant-message', response.source);
   } catch (error) {
-    addMessage(`Live chat is unavailable: ${error.message}. No demo response was generated.`, 'system-message', 'API UNAVAILABLE');
+    addMessage(`Live chat is unavailable: ${error.message}`, 'system-message', 'API UNAVAILABLE');
+  } finally {
+    pending.remove();
   }
-  document.querySelector('#chat-input').focus();
 }
-
 async function refreshWorkloads() {
   try {
     state.workloads = await getWorkloads();
@@ -133,14 +122,17 @@ document.querySelector('#chat-form').addEventListener('submit', async (event) =>
   event.preventDefault();
   const input = document.querySelector('#chat-input');
   const question = input.value.trim();
-  if (!question) return;
+  if (!question || state.busy) return;
+  state.busy = true;
+  document.querySelector('.send-button').disabled = true;
   input.value = '';
   addMessage(question, 'user-message', 'YOU');
   try {
-    const response = await sendChatMessage(question, state.selected);
-    addMessage(response.text, 'assistant-message', response.source);
-  } catch (error) {
-    addMessage(`Live chat is unavailable: ${error.message}. No demo response was generated.`, 'system-message', 'API UNAVAILABLE');
+    await submitChat(question);
+  } finally {
+    state.busy = false;
+    document.querySelector('.send-button').disabled = false;
+    input.focus();
   }
 });
 

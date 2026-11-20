@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: investigator
-          image: nginxinc/nginx-unprivileged:1.27-alpine
+          image: kubeinvestigatoracr5837.azurecr.io/astronomy-investigator-ui:20261115-chat-3
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

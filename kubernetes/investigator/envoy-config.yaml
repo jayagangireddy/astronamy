@@ -37,11 +37,8 @@ data:
                         - name: frontend
                           domains: ["*"]
                           routes:
-                            - match: { path: "/mcp" }
-                              route:
-                                cluster: kube_investigator_mcp
-                                timeout: 0s
-                                idle_timeout: 0s
+                            - match: { path: "/api/chat" }
+                              route: { cluster: kube_investigator_agent, timeout: 120s }
                             - match: { prefix: "/investigator-api/" }
                               route: { cluster: investigator_api, prefix_rewrite: "/api/" }
                             - match: { prefix: "/investigator/" }
@@ -96,17 +93,17 @@ data:
                   - endpoint:
                       address:
                         socket_address: { address: opentelemetry-demo-otelcol.otelcol.svc.cluster.local, port_value: 4318 }
-        - name: kube_investigator_mcp
+        - name: kube_investigator_agent
           type: STRICT_DNS
           connect_timeout: 5s
           lb_policy: ROUND_ROBIN
           load_assignment:
-            cluster_name: kube_investigator_mcp
+            cluster_name: kube_investigator_agent
             endpoints:
               - lb_endpoints:
                   - endpoint:
                       address:
-                        socket_address: { address: kube-investigator-mcp.kube-investigator.svc.cluster.local, port_value: 8000 }
+                        socket_address: { address: kube-investigator-agent.kube-investigator.svc.cluster.local, port_value: 8080 }
         - name: investigator
           type: STRICT_DNS
           connect_timeout: 5s

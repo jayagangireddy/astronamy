@@ -25,10 +25,6 @@
             <h1 id="investigator-title">Investigator</h1>
           <p>Ask about live workload health and incidents.</p>
           </div>
-          <div class="selected-workload" id="selected-workload" aria-live="polite">
-            <span class="selected-icon" aria-hidden="true">⌕</span>
-            <span><small>SELECTED WORKLOAD</small><strong id="selected-name">None selected</strong></span>
-          </div>
           <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
           <form class="chat-form" id="chat-form">
             <label class="sr-only" for="chat-input">Message the Investigator</label>
@@ -57,7 +53,7 @@
 
           <div class="table-card">
             <div class="table-toolbar">
-              <div><h3>Service health</h3><p>Choose a live workload to start an investigation.</p></div>
+              <div><h3>Service health</h3><p>Ask the Investigator about any workload or all unhealthy services.</p></div>
               <div class="filters" role="group" aria-label="Filter workloads">
                 <button type="button" class="filter-button active" data-filter="all" aria-pressed="true">All <span id="all-filter-count"></span></button>
                 <button type="button" class="filter-button" data-filter="healthy" aria-pressed="false">Healthy</button>
@@ -67,7 +63,7 @@
             <div class="table-scroll">
               <table>
                 <caption class="sr-only">Live Kubernetes workload health and replica readiness</caption>
-                <thead><tr><th scope="col">Service name</th><th scope="col">Health status</th><th scope="col">Ready / desired</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">Service name</th><th scope="col">Health status</th><th scope="col">Ready / desired</th></tr></thead>
                 <tbody id="workload-rows"></tbody>
               </table>
             </div>
