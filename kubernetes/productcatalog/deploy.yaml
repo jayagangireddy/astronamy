@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-productcatalogservice
+  namespace: productcatalogservice
   labels:
     
     opentelemetry.io/name: opentelemetry-demo-productcatalogservice
@@ -44,13 +44,13 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.labels['app.kubernetes.io/component']
             - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
+              value: 'opentelemetry-demo-otelcol.otelcol.svc.cluster.local'
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: cumulative
             - name: PRODUCT_CATALOG_SERVICE_PORT
               value: "8080"
             - name: FLAGD_HOST
-              value: 'opentelemetry-demo-flagd'
+              value: 'opentelemetry-demo-flagd.flagd.svc.cluster.local'
             - name: FLAGD_PORT
               value: "8013"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT

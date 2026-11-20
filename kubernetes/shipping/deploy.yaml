@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-shippingservice
+  namespace: shippingservice
   labels:    
     opentelemetry.io/name: opentelemetry-demo-shippingservice
     app.kubernetes.io/instance: opentelemetry-demo
@@ -41,13 +41,13 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.labels['app.kubernetes.io/component']
             - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
+              value: 'opentelemetry-demo-otelcol.otelcol.svc.cluster.local'
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: cumulative
             - name: SHIPPING_SERVICE_PORT
               value: "8080"
             - name: QUOTE_SERVICE_ADDR
-              value: http://opentelemetry-demo-quoteservice:8080
+              value: http://opentelemetry-demo-quoteservice.quoteservice.svc.cluster.local:8080
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4317
             - name: OTEL_RESOURCE_ATTRIBUTES

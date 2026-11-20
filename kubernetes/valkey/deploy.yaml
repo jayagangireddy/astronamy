@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-valkey
+  namespace: valkey
   labels:
     opentelemetry.io/name: opentelemetry-demo-valkey
     app.kubernetes.io/instance: opentelemetry-demo
@@ -43,7 +43,7 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.labels['app.kubernetes.io/component']
             - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
+              value: 'opentelemetry-demo-otelcol.otelcol.svc.cluster.local'
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: cumulative
             - name: OTEL_RESOURCE_ATTRIBUTES

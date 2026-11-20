@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-checkoutservice
+  namespace: checkoutservice
   labels:
     
     opentelemetry.io/name: opentelemetry-demo-checkoutservice
@@ -44,27 +44,27 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.labels['app.kubernetes.io/component']
             - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
+              value: 'opentelemetry-demo-otelcol.otelcol.svc.cluster.local'
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: cumulative
             - name: CHECKOUT_SERVICE_PORT
               value: "8080"
             - name: CART_SERVICE_ADDR
-              value: 'opentelemetry-demo-cartservice:8080'
+              value: 'opentelemetry-demo-cartservice.cartservice.svc.cluster.local:8080'
             - name: CURRENCY_SERVICE_ADDR
-              value: 'opentelemetry-demo-currencyservice:8080'
+              value: 'opentelemetry-demo-currencyservice.currencyservice.svc.cluster.local:8080'
             - name: EMAIL_SERVICE_ADDR
-              value: http://opentelemetry-demo-emailservice:8080
+              value: http://opentelemetry-demo-emailservice.emailservice.svc.cluster.local:8080
             - name: PAYMENT_SERVICE_ADDR
-              value: 'opentelemetry-demo-paymentservice:8080'
+              value: 'opentelemetry-demo-paymentservice.paymentservice.svc.cluster.local:8080'
             - name: PRODUCT_CATALOG_SERVICE_ADDR
-              value: 'opentelemetry-demo-productcatalogservice:8080'
+              value: 'opentelemetry-demo-productcatalogservice.productcatalogservice.svc.cluster.local:8080'
             - name: SHIPPING_SERVICE_ADDR
-              value: 'opentelemetry-demo-shippingservice:8080'
+              value: 'opentelemetry-demo-shippingservice.shippingservice.svc.cluster.local:8080'
             - name: KAFKA_SERVICE_ADDR
-              value: 'opentelemetry-demo-kafka:9092'
+              value: 'opentelemetry-demo-kafka.kafka.svc.cluster.local:9092'
             - name: FLAGD_HOST
-              value: 'opentelemetry-demo-flagd'
+              value: 'opentelemetry-demo-flagd.flagd.svc.cluster.local'
             - name: FLAGD_PORT
               value: "8013"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -79,7 +79,7 @@ spec:
         - command:
           - sh
           - -c
-          - until nc -z -v -w30 opentelemetry-demo-kafka 9092; do echo waiting
+          - until nc -z -v -w30 opentelemetry-demo-kafka.kafka.svc.cluster.local 9092; do echo waiting
             for kafka; sleep 2; done;
           image: busybox:latest
           name: wait-for-kafka

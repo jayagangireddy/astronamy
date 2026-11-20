@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/component.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opentelemetry-demo-kafka
+  namespace: kafka
   labels:
     
     opentelemetry.io/name: opentelemetry-demo-kafka
@@ -46,11 +46,11 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.labels['app.kubernetes.io/component']
             - name: OTEL_COLLECTOR_NAME
-              value: 'opentelemetry-demo-otelcol'
+              value: 'opentelemetry-demo-otelcol.otelcol.svc.cluster.local'
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: cumulative
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: PLAINTEXT://opentelemetry-demo-kafka:9092
+              value: PLAINTEXT://opentelemetry-demo-kafka.kafka.svc.cluster.local:9092
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4318
             - name: KAFKA_HEAP_OPTS

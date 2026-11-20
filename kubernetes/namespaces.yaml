@@ -1,0 +1,174 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: accountingservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cartservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: checkoutservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: currencyservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: emailservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flagd
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frauddetectionservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontend
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: frontendproxy
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: imageprovider
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: investigator
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: investigator-api
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jaeger
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loadgenerator
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: otelcol
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: paymentservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: productcatalogservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quoteservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recommendationservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shippingservice
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: valkey
+  labels:
+    app.kubernetes.io/part-of: opentelemetry-demo

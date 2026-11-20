@@ -1,9 +1,9 @@
----
-# Source: opentelemetry-demo/templates/flagd-config.yaml
+# Source: opentelemetry-demo.frontendproxy.svc.cluster.local/templates/flagd-config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: opentelemetry-demo-flagd-config
+  namespace: flagd
   labels:
 
     opentelemetry.io/name: opentelemetry-demo
@@ -119,4 +119,3 @@ data:
         }
       }
     }
-
