@@ -37,6 +37,8 @@ data:
                         - name: frontend
                           domains: ["*"]
                           routes:
+                            - match: { path: "/api/chat/stream" }
+                              route: { cluster: kube_investigator_agent, timeout: 150s, idle_timeout: 130s }
                             - match: { path: "/api/chat" }
                               route: { cluster: kube_investigator_agent, timeout: 120s }
                             - match: { prefix: "/investigator-api/" }
