@@ -141,7 +141,9 @@ function renderRows() {
   }
 }
 
-async function submitChat(question) {
+async function submitChat(question, displayedQuestion = question) {
+  const previousHistory = state.history.slice();
+  state.history.push({ role: 'user', content: displayedQuestion });
   const article = document.createElement('article');
   article.className = 'message assistant-message';
   const meta = document.createElement('div');
@@ -185,7 +187,7 @@ async function submitChat(question) {
     messages.scrollTop = messages.scrollHeight;
   };
   try {
-    const response = await sendChatMessage(question, state.history, {
+    const response = await sendChatMessage(question, previousHistory, {
       onStatus: updateStatus,
       onDelta: (text) => {
         streamedText += text;
@@ -194,7 +196,7 @@ async function submitChat(question) {
       },
       signal: controller.signal,
     });
-    state.history.push({ role: 'user', text: question }, { role: 'assistant', text: response.text });
+    state.history.push({ role: 'assistant', content: response.text });
     meta.textContent = response.source;
     renderAnswer(content, response.text);
     activity.open = false;
@@ -253,7 +255,7 @@ async function startChat(question, workload = null) {
   addMessage(question, 'user-message', 'YOU');
   try {
     const prompt = workload ? `${question}\nWorkload: ${workload.resourceName}; namespace: ${workload.namespace}.` : question;
-    await submitChat(prompt);
+    await submitChat(prompt, question);
   } finally {
     state.busy = false;
     document.querySelector('.send-button').disabled = false;

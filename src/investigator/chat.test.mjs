@@ -54,6 +54,86 @@ test('deltas arrive progressively and the final answer is authoritative', async 
   } finally { globalThis.fetch = original; }
 });
 
+test('follow-up sends the last ten messages as structured history to streaming and fallback', async () => {
+  const original = globalThis.fetch;
+  const requests = [];
+  const history = Array.from({ length: 12 }, (_, i) => ({
+    role: i % 2 ? 'assistant' : 'user',
+    content: i === 10 ? 'Why is paymentservice failing?' : i === 11 ? 'Paymentservice is in ImagePullBackOff.' : `Earlier message ${i}`,
+    internal: 'must not be sent',
+  }));
+  try {
+    globalThis.fetch = async (url, options) => {
+      requests.push({ url, body: JSON.parse(options.body) });
+      if (url.endsWith('/stream')) return new Response('', { status: 404 });
+      return Response.json({ reply: 'The deployment uses an invalid image.' });
+    };
+    await sendChatMessage('Can you check the deployment file?', history);
+    assert.deepEqual(requests.map((request) => request.url), ['/api/chat/stream', '/api/chat']);
+    assert.deepEqual(requests[0].body, requests[1].body);
+    assert.equal(requests[0].body.message, 'Can you check the deployment file?');
+    assert.equal(requests[0].body.history.length, 10);
+    assert.deepEqual(requests[0].body.history.at(-2), { role: 'user', content: 'Why is paymentservice failing?' });
+    assert.deepEqual(requests[0].body.history.at(-1), { role: 'assistant', content: 'Paymentservice is in ImagePullBackOff.' });
+    assert.ok(!JSON.stringify(requests[0].body.history).includes('must not be sent'));
+    assert.ok(!requests[0].body.history.some((turn) => turn.content === requests[0].body.message));
+  } finally { globalThis.fetch = original; }
+});
+
+test('streaming and interrupted responses do not mutate supplied history', async () => {
+  const original = globalThis.fetch;
+  const history = [{ role: 'user', content: 'Why is cartservice restarting?' }, { role: 'assistant', content: 'It was OOMKilled.' }];
+  try {
+    let request;
+    globalThis.fetch = async (url, options) => {
+      request = JSON.parse(options.body);
+      return new Response('event: delta\ndata: {"text":"partial"}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+    };
+    await assert.rejects(sendChatMessage('What about its memory?', history), /ended before/);
+    assert.deepEqual(request.history, history);
+    assert.equal(history.length, 2);
+  } finally { globalThis.fetch = original; }
+});
+
+test('chat records user turns and only completed assistant replies', async () => {
+  const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
+  const submitSource = app.slice(app.indexOf('async function submitChat('), app.indexOf('\nasync function refreshWorkloads('));
+  class Element {
+    constructor() { this.classList = { add() {} }; }
+    append() {}
+    replaceChildren() {}
+    setAttribute() {}
+    querySelectorAll() { return []; }
+  }
+  const document = { createElement: () => new Element() };
+  const window = { addEventListener() {}, removeEventListener() {} };
+  const messages = { append() {}, scrollHeight: 0 };
+  const state = { history: [] };
+  const tracker = () => ({ steps: [], update() {} });
+  let fail = false;
+  let receivedHistory;
+  const send = async (question, history, callbacks) => {
+    receivedHistory = history;
+    callbacks.onDelta('Partial answer');
+    if (fail) throw new Error('interrupted');
+    return { text: 'Paymentservice is in ImagePullBackOff.', source: 'INVESTIGATOR' };
+  };
+  const submit = new Function('document', 'window', 'messages', 'state', 'createProgressTracker', 'sendChatMessage', 'renderAnswer', 'AbortController', `${submitSource}; return submitChat;`)(
+    document, window, messages, state, tracker, send, () => {}, AbortController,
+  );
+  await submit('Investigate paymentservice\nWorkload: payment; namespace: paymentservice.', 'Investigate paymentservice');
+  assert.deepEqual(receivedHistory, []);
+  assert.deepEqual(state.history, [
+    { role: 'user', content: 'Investigate paymentservice' },
+    { role: 'assistant', content: 'Paymentservice is in ImagePullBackOff.' },
+  ]);
+  fail = true;
+  await submit('Can you check the deployment file?');
+  assert.equal(receivedHistory.length, 2);
+  assert.deepEqual(state.history.at(-1), { role: 'user', content: 'Can you check the deployment file?' });
+  assert.equal(state.history.length, 3);
+});
+
 test('markdown renders as safe DOM nodes with lists, code and escaped punctuation', async () => {
   const app = await readFile(new URL('./app.js', import.meta.url), 'utf8');
   class Node {

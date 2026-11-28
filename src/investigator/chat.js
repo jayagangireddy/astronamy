@@ -58,11 +58,10 @@ export function createProgressTracker() {
 }
 
 function requestBody(message, history) {
-  return JSON.stringify({ message: [
-    'Investigate the user request using available Kubernetes MCP tools to discover services and namespaces and inspect relevant resources. For all unhealthy services, discover and investigate each unhealthy service. Use GitHub tools when relevant. Explain the likely cause and supporting evidence, and state any uncertainty or unavailable evidence.',
-    ...history.map((turn) => `${turn.role === 'user' ? 'User' : 'Assistant'}: ${turn.text}`),
-    `User: ${message}`,
-  ].join('\n\n') });
+  return JSON.stringify({
+    message,
+    history: history.slice(-10).map(({ role, content }) => ({ role, content })),
+  });
 }
 
 export async function sendChatMessage(message, history = [], { onStatus = () => {}, onDelta = () => {}, signal } = {}) {
